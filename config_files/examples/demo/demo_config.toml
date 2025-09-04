@@ -1,0 +1,72 @@
+# An example config file, demonstrating the TOML syntax
+# for defining an experiment to be run by Workflow.
+# See the annotated version for detailed explanations.
+#
+# See https://toml.io/en/ for more information.
+
+
+[experiment]
+name = "my_demo_experiment"
+out_dir = "my_results/examples"
+# part_types_py = "optional/path/to/part/types/py/file"
+[experiment.initial_values]
+researcher = "Bob"
+
+
+[part]
+start_here = "greeting"
+
+
+[part.greeting]
+type_name = "step.terminal"
+next_part = "menu"
+[part.greeting.config_values]
+prompt = "Hello {researcher}!"
+
+
+[part.menu]
+type_name = "step.terminal"
+next_part = "decide_option"
+[part.menu.config_values]
+prompt = """
+Enter 1 to change your name
+Enter 2 for calculator
+Enter 3 for manual control
+Enter 4 to quit"
+"""
+enter = "int"
+to = "menu_option"
+
+
+[part.decide_option]
+type_name = "decision.conditional"
+[part.decide_option.next_part]
+option_1 = "name_change"
+option_2 = "my_calculator"
+# option_3 assumed None since absent   
+option_4 = "quit"
+try_again = "menu"
+[part.decide_option.config_values]
+statements = [
+    "option_1 if {menu_option} == 1",
+    "option_2 if {menu_option} == 2",
+    "option_3 if {menu_option} == 3",
+    "option_4 if {menu_option} == 4",
+    "else try_again"
+]
+
+
+[part.name_change]
+type_name = "step.terminal"
+next_part = "greeting"
+[part.name_change.config_values]
+prompt = "Enter your new name"
+enter = "str"
+to = "researcher"
+
+
+[part.my_calculator]
+type_name = "flow.import"
+next_part = "menu"
+[part.my_calculator.config_values]
+path = "helper_flows/calculator.toml"

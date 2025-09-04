@@ -8,10 +8,10 @@
             "name": "Python Debugger: Workflow Experiment",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/workflow/workflow.py",
+            "program": "${workspaceFolder}/workflow.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/config_files/examples/demo_config.toml"
+                "${workspaceFolder}/config_files/examples/demo/demo_config.toml"
             ]
         },
     ]
