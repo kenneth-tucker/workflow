@@ -1,4 +1,5 @@
 from copy import deepcopy
+import os
 from typing import Optional
 import json
 import datetime
@@ -121,9 +122,9 @@ class ExperimentTrace:
         input_file_path: Optional[str] = None,
         output_file_path: Optional[str] = None,
     ):
-        self.input_file_path = input_file_path
-        self.output_file_path = output_file_path
-        if input_file_path:
+        self.input_file_path = os.path.normpath(input_file_path) if input_file_path else None
+        self.output_file_path = os.path.normpath(output_file_path) if output_file_path else None
+        if self.input_file_path:
             # Load an old trace
             self._load_input_trace()
             self._parse_input_trace()
@@ -132,7 +133,7 @@ class ExperimentTrace:
         else:
             # Start a new trace
             self.trace = []
-        if output_file_path:
+        if self.output_file_path:
             self._open_output_trace()
             self._initialize_output_trace()
 

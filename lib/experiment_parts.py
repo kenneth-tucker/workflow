@@ -1,6 +1,7 @@
 from typing import override
-from workflow.lib.utils.exceptions import ConfigError
-from workflow.lib.utils.part_utils import PartContext
+from lib.utils.part_utils import PartTypeInfo
+from lib.utils.exceptions import ConfigError
+from lib.utils.part_utils import PartContext
 
 # Contains the common functionality for all parts.
 # Inherit from Step, Decision, or Flow below instead of this but
@@ -11,7 +12,7 @@ class _Part:
         # in this class instead.
         self._context = context
 
-    # Get the name assigned to this part instance by the manager.
+    # Get the name assigned to this part instance.
     def get_name(self) -> str:
         return self._context.config.name
 
@@ -132,7 +133,7 @@ class _Part:
     # missing. This option is convenient but can lead to unexpected
     # behavior and brittle experiments if not used carefully.
     #
-    # IMPORTANT NOTE: Only Step types should modify the experiment state.
+    # IMPORTANT NOTE: Only Step types should modify the experiment data.
     #
     # Example:
     # x = 42
@@ -175,9 +176,11 @@ class _Part:
 #         super().__init__(context)
 #         ...
 #
-#     def run(self) -> None:
+#     @override
+#     def run_step(self) -> None:
 #         ...
 
+# A step to run in the experiment. Can modify the experiment data.
 class Step(_Part):
     def __init__(self, context: PartContext):
         super().__init__(context)
@@ -189,6 +192,9 @@ class Step(_Part):
     def run_step(self) -> None:
         raise NotImplementedError("Must implement the run_step method in your subclass")
 
+# A decision point in the experiment. A Decision subclass
+# should NOT modify anything, it should just decide what
+# part of the experiment we want to do next.
 class Decision(_Part):
     def __init__(self, context: PartContext):
         super().__init__(context)
@@ -207,30 +213,67 @@ class Decision(_Part):
     def set_output(self, argument_name, value, optional = False, can_use_global = False):
         # You should NOT be setting outputs in a decision type,
         # the ExperimentManager assumes only step types modify
-        # the experiment state.
+        # the experiment data.
         raise TypeError("Cannot set an output in a decision")
 
+# A flow sets up and contains related parts. A Flow subclass
+# should NOT modify anything other than the parts it contains.
 class Flow(_Part):
     def __init__(self, context: PartContext):
         super().__init__(context)
 
     # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this when it enters your flow, providing
-    # a list of the names of the parts in your flow. You need to setup
-    # the flow then return the name of the first part of the flow for
-    # the ExperimentManager to run, or "done" to leave the flow.
-    def begin_flow(self, flow_parts: list[str]) -> str:
+    # ExperimentManager calls this when it enters your flow.
+    # You need to setup your flow's parts then return the (relative)
+    # name of the first part of your flow for the ExperimentManager
+    # to run, or "done" to leave the flow right away or "quit"
+    # to end the entire experiment or None to have the researcher
+    # decide what to do first in the flow.
+    def begin_flow(self) -> str | None:
         raise NotImplementedError("Must implement the begin_flow method in your subclass")
 
     # NOTE: YOU must implement this in your class definition.
     # ExperimentManager calls this when it exits your flow.
-    # You need to perform any necessary cleanup or state restoration here.
+    # You need to perform any necessary cleanup here.
     def end_flow(self) -> None:
         raise NotImplementedError("Must implement the end_flow method in your subclass")
-    
+
     @override
     def set_output(self, argument_name, value, optional = False, can_use_global = False):
         # You should NOT be setting outputs in a flow type,
         # the ExperimentManager assumes only step types modify
-        # the experiment state.
+        # the experiment data.
         raise TypeError("Cannot set an output in a flow")
+    
+    # Helper functions you can call to manage your flow
+    # Note: an absolute part name is the full name of the part
+    # including all parent flows, e.g. "a.b.c" refers to the part
+    # "c" in the flow "a.b". A relative part name is the name
+    # of the part without any parent flows, e.g. "c" refers to
+    # the same part as "a.b.c". We use relative part names for
+    # these helpers.
+
+    def add_part(self, raw_config: dict) -> None:
+        # Construct a new part with the given config data then add
+        # it into the current flow. If a part already exists in the flow
+        # with the same name then that part is replaced with the new one.
+        # Raises a ConfigError if the config is found to be invalid.
+        pass # TODO implement
+
+    def remove_part(self, relative_part_name: str) -> None:
+        # Remove a part from the current flow, does nothing if the part does not exist.
+        pass # TODO implement
+
+    def list_part_names(self) -> list[str]:
+        # List the relative part names for all parts in the current flow.
+        pass # TODO implement
+
+    def get_part(self, relative_part_name: str) -> _Part | None:
+        # Access a part object from the current flow, returns None
+        # if the part does not exist.
+        pass # TODO implement
+
+    def get_part_type_info(self, relative_part_name: str) -> PartTypeInfo | None:
+        # Get the type information for a part from the current flow with the
+        # given name.
+        pass # TODO implement

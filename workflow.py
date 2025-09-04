@@ -19,9 +19,9 @@ import sys
 if __package__ is None or __package__ == "":
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from workflow.lib.experiment_config import ExperimentConfig
-from workflow.lib.experiment_manager import ExperimentManager, ExperimentMode
-from workflow.lib.experiment_trace import ExperimentTrace
+from lib.experiment_config import ExperimentConfig
+from lib.experiment_manager import ExperimentManager, ExperimentMode
+from lib.experiment_trace import ExperimentTrace
 
 def main():
     # Get the arguments
@@ -47,9 +47,9 @@ def main():
     # Read in the old trace file, if provided
     old_trace = ExperimentTrace(input_file_path=old_trace_file) if old_trace_file else None
     # Setup the experiment
-    manager = ExperimentManager(config, mode, old_trace=old_trace)
-    # Run the experiment, returns on completion
-    manager.run()
+    manager = ExperimentManager(config)
+    # Run the experiment one time, returns on completion
+    manager.run(mode, old_trace)
 
 if __name__ == "__main__":
     main()
