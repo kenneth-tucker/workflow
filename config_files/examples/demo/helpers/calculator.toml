@@ -1,0 +1,8 @@
+[part]
+start_here = "todo"
+
+[part.todo]
+type_name = "step.terminal"
+next_part = "done"
+[part.todo.config_values]
+prompt = "TODO - implement calculator"

@@ -7,7 +7,8 @@
 
 [experiment]
 name = "my_demo_experiment"
-out_dir = "my_results/examples"
+# Save output files to workflow/my_results
+out_dir = "../../../my_results/examples"
 # part_types_py = "optional/path/to/part/types/py/file"
 [experiment.initial_values]
 researcher = "Bob"
@@ -29,11 +30,14 @@ type_name = "step.terminal"
 next_part = "decide_option"
 [part.menu.config_values]
 prompt = """
+
 Enter 1 to change your name
-Enter 2 for calculator
-Enter 3 for manual control
-Enter 4 to quit"
-"""
+Enter 2 to use a calculator
+Enter 3 to load in a config
+Enter 4 to enter manual mode
+Enter 5 to quit
+
+> """
 enter = "int"
 to = "menu_option"
 
@@ -43,8 +47,9 @@ type_name = "decision.conditional"
 [part.decide_option.next_part]
 option_1 = "name_change"
 option_2 = "my_calculator"
-# option_3 assumed None since absent   
-option_4 = "quit"
+option_3 = "load_prompt"
+# option_4 assumed None since absent   
+option_5 = "quit"
 try_again = "menu"
 [part.decide_option.config_values]
 statements = [
@@ -52,6 +57,7 @@ statements = [
     "option_2 if {menu_option} == 2",
     "option_3 if {menu_option} == 3",
     "option_4 if {menu_option} == 4",
+    "option_5 if {menu_option} == 5",
     "else try_again"
 ]
 
@@ -60,13 +66,32 @@ statements = [
 type_name = "step.terminal"
 next_part = "greeting"
 [part.name_change.config_values]
-prompt = "Enter your new name"
+prompt = "Enter your new name: "
 enter = "str"
 to = "researcher"
 
 
 [part.my_calculator]
-type_name = "flow.import"
+type_name = "flow.load"
 next_part = "menu"
 [part.my_calculator.config_values]
-path = "helper_flows/calculator.toml"
+path = "helpers/calculator.toml"
+
+
+[part.load_prompt]
+type_name = "step.terminal"
+next_part = "my_dynamically_loaded_flow"
+[part.load_prompt.config_values]
+prompt = """
+Enter a config file path, relative or absolute
+(e.g. 'helpers/abc.toml' or 'helpers/xyz.toml')
+> """
+enter = "str"
+to = "flow_config_path"
+
+
+[part.my_dynamically_loaded_flow]
+type_name = "flow.load"
+next_part = "menu"
+[part.my_dynamically_loaded_flow.input_names]
+path = "flow_config_path"
