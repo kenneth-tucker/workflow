@@ -1,6 +1,6 @@
 import os
 import tomllib
-from lib.utils.parse_config import extract_parts
+from lib.utils.parse_config import extract_part_configs
 from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartConfig, PartTypeInfo
 from lib.utils.import_module import import_module_from_path
@@ -34,9 +34,17 @@ class ExperimentConfig:
         self.experiment_name = self.experiment_table.get("name")
         if not self.experiment_name:
             raise ConfigError("Missing experiment name in config")
-        self.out_dir = self.experiment_table.get("out_dir")
-        if not self.out_dir:
+        out_dir_raw = self.experiment_table.get("out_dir")
+        if not out_dir_raw:
             raise ConfigError("Missing experiment output directory in config")
+        # If the output directory path is a relative path, then
+        # it is relative to the directory of this config file
+        if not os.path.isabs(out_dir_raw):
+            self.out_dir = os.path.normpath(
+                os.path.join(os.path.dirname(self.file_path), out_dir_raw)
+            )
+        else:
+            self.out_dir = os.path.normpath(out_dir_raw)
         self.part_types_py = self.experiment_table.get("part_types_py", None)
         self.initial_values = self.experiment_table.get("initial_values", {})
 
@@ -45,7 +53,7 @@ class ExperimentConfig:
         if not self.part_table:
             raise ConfigError("Missing part table in config")
         self.initial_part_name = self.part_table.get("start_here", None)
-        self.part_configs = extract_parts(self.file_path, self.raw_input)
+        self.part_configs = extract_part_configs(self.file_path, self.part_table, "")
         if not self.part_configs:
             raise ConfigError("No parts found in config")
 
@@ -69,7 +77,13 @@ class ExperimentConfig:
     def _validate_config(self):
         # Perform checks on various aspects of the
         # experiment configuration, to prevent misconfigurations
-        # and tricky bugs during experiment execution
-        for part_name, part_config in self.part_configs.items():
+        # and tricky bugs during experiment execution due
+        # to simple mistakes in the config file.
+        print("Validating experiment configuration...")
+        for part_full_name, part_config in self.part_configs.items():
             if part_config.type_name not in self.part_types:
-                raise ConfigError(f"Unknown part type '{part_config.type_name}' for part '{part_name}'")
+                raise ConfigError(f"Unknown part type '{part_config.type_name}' for part '{part_full_name}'")
+        # TODO do more thorough validation (including inputs/outputs being right for type)
+        # TODO check each nested part has a flow parent
+        # TODO check all next_part references are short names, contain no dots, and refer
+        # to valid part names

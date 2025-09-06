@@ -2,7 +2,7 @@ from copy import deepcopy
 import os
 from typing import Optional
 import json
-import datetime
+from datetime import datetime
 
 # The latest trace file version
 # IMPORTANT NOTE: if you change the format you must increment
@@ -15,37 +15,41 @@ TRACE_FILE_VERSION = 1
 class TraceEntry:
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         event: str
     ):
         self.timestamp = timestamp
         self.event = event
 
-# Trace entry for the start of an experiment
+# Trace entry for the start of an experiment run
 class ExperimentBeginEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
-        experiment_name: str
+        timestamp: datetime,
+        experiment_name: str,
+        run_number: int
     ):
         super().__init__(timestamp, "experiment_begin")
         self.experiment_name = experiment_name
+        self.run_number = run_number
 
-# Trace entry for the end of an experiment
+# Trace entry for the end of an experiment run
 class ExperimentEndEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
-        experiment_name: str
+        timestamp: datetime,
+        experiment_name: str,
+        run_number: int
     ):
         super().__init__(timestamp, "experiment_end")
         self.experiment_name = experiment_name
+        self.run_number = run_number
 
 # Trace entry for error encountered while running a part
 class ErrorEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         part_name: str,
         error_message: str
     ):
@@ -57,8 +61,8 @@ class ErrorEntry(TraceEntry):
 class ResearcherDecisionEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
-        next_part: str
+        timestamp: datetime,
+        next_part: str | None
     ):
         super().__init__(timestamp, "researcher_decision")
         self.next_part = next_part
@@ -67,7 +71,7 @@ class ResearcherDecisionEntry(TraceEntry):
 class StepEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         step_name: str,
         data_before: dict,
         data_after: dict
@@ -82,9 +86,9 @@ class StepEntry(TraceEntry):
 class DecisionEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         decision_name: str,
-        next_part: str,
+        next_part: str | None,
     ):
         super().__init__(timestamp, "decision")
         self.decision_name = decision_name
@@ -94,9 +98,9 @@ class DecisionEntry(TraceEntry):
 class FlowBeginEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         flow_name: str,
-        first_part: str,
+        first_part: str | None,
     ):
         super().__init__(timestamp, "flow_begin")
         self.flow_name = flow_name
@@ -106,7 +110,7 @@ class FlowBeginEntry(TraceEntry):
 class FlowEndEntry(TraceEntry):
     def __init__(
         self,
-        timestamp: datetime.datetime,
+        timestamp: datetime,
         flow_name: str,
     ):
         super().__init__(timestamp, "flow_end")
@@ -141,7 +145,9 @@ class ExperimentTrace:
     def record(self, entry: TraceEntry):
         self.trace.append(entry)
         if self.output_trace_file:
-            self.output_trace_file.write(',\n')
+            if len(self.trace) > 1:
+                # Add a comma before the next entry
+                self.output_trace_file.write(',\n')
             # Serialize the entry as a dict
             entry_dict = entry.__dict__.copy()
             entry_dict["timestamp"] = entry.timestamp.isoformat()
@@ -158,22 +164,25 @@ class ExperimentTrace:
         self.raw_input = data
 
     def _parse_input_trace(self):
+        # Note: update this method if the trace file format changes
         version = self.raw_input.get("version")
         raw_trace = self.raw_input.get("trace", [])
         # Deserialize the raw trace entries
         self.parsed_input = []
         for entry in raw_trace:
-            timestamp = datetime.datetime.fromisoformat(entry["timestamp"])
+            timestamp = datetime.fromisoformat(entry["timestamp"])
             match entry.get("event"):
                 case "experiment_begin":
                     self.parsed_input.append(ExperimentBeginEntry(
                         timestamp=timestamp,
-                        experiment_name=entry["experiment_name"]
+                        experiment_name=entry["experiment_name"],
+                        run_number=entry["run_number"]
                     ))
                 case "experiment_end":
                     self.parsed_input.append(ExperimentEndEntry(
                         timestamp=timestamp,
-                        experiment_name=entry["experiment_name"]
+                        experiment_name=entry["experiment_name"],
+                        run_number=entry["run_number"]
                     ))
                 case "error":
                     self.parsed_input.append(ErrorEntry(
@@ -211,7 +220,7 @@ class ExperimentTrace:
                         flow_name=entry["flow_name"]
                     ))
                 case _:
-                    raise ValueError(f"Unknown trace entry type: {entry.__}")
+                    raise ValueError(f"Unknown trace entry type: {entry.get('event')}")
         self.parsed_input.sort(key=lambda e: e.timestamp)
 
     def _validate_input_trace(self):
@@ -227,7 +236,6 @@ class ExperimentTrace:
 
     def _close_output_trace(self):
         if self.output_trace_file:
-            self._finalize_output_trace()
             self.output_trace_file.close()
             self.output_trace_file = None
 
@@ -241,5 +249,11 @@ class ExperimentTrace:
             self.output_trace_file.write(']}')
             self.output_trace_file.flush()
 
-    def __del__(self):
+    def __enter__(self):
+        # Support usage as a context manager
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Ensure the output trace file is ended and closed properly
+        self._finalize_output_trace()
         self._close_output_trace()

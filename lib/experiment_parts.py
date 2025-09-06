@@ -1,5 +1,5 @@
 from typing import override
-from lib.utils.part_utils import PartTypeInfo
+from lib.utils.part_utils import PartConfig, PartTypeInfo
 from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartContext
 
@@ -12,9 +12,13 @@ class _Part:
         # in this class instead.
         self._context = context
 
-    # Get the name assigned to this part instance.
-    def get_name(self) -> str:
-        return self._context.config.name
+    # Get the config file path that defined this part.
+    def get_config_file_path(self) -> str:
+        return self._context.config.file_path
+
+    # Get the full part name assigned to this part instance.
+    def get_full_name(self) -> str:
+        return self._context.config.full_name
 
     # Read a configuration value, optionally checking if its type
     # is in the 'allow' list of types. Raises a ConfigError if
@@ -32,7 +36,7 @@ class _Part:
     # value = self.get_config('my_config')
     #
     # Example (required config with type checking):
-    # value = self.get_config('my_int_or_int_list_config', allow=[int, list[int]])
+    # value = self.get_config('my_int_or_list_config', allow=[int, list])
     #
     # Example (optional config, no type checking):
     # value = self.get_config('my_optional_config', optional=True)
@@ -50,13 +54,14 @@ class _Part:
                 return None
             # Check for typos in config if here
             raise ConfigError(
-                f"Config '{config_name}' for {self._context.config.name} must be assigned a value"
+                f"Config '{config_name}' for {self._context.config.full_name} must be assigned a value"
             )
         value = self._context.config.config_values.get(config_name)
+        # Note: isinstance() cannot handle nested types like list[int]
         if allow is not None and not any(isinstance(value, t) for t in allow):
             # Config has unexpected type
             raise ConfigError(
-                f"Config '{config_name}' for {self._context.config.name} has the "
+                f"Config '{config_name}' for {self._context.config.full_name} has the "
                 f"wrong type, {type(value).__name__}, list of allowed types: "
                 f"{allow}"
             )
@@ -73,16 +78,11 @@ class _Part:
     # and brittle experiments if not used carefully. If the global
     # name is also not found, None is returned.
     #
-    # Important Note: you can (and should) call get_config() from
-    # your class constructor BUT make sure to do so after calling
-    # the superclass constructor, super().__init__(context), otherwise
-    # it will not work as expected.
-    #
     # Example (required input, no type checking):
     # value = self.get_input('my_arg')
     #
     # Example (required input with type checking):
-    # value = self.get_input('my_int_or_int_list_arg', allow=[int, list[int]])
+    # value = self.get_input('my_int_or_list_arg', allow=[int, list])
     #
     # Example (optional input, no type checking):
     # value = self.get_input('my_optional_arg', optional=True)
@@ -109,15 +109,16 @@ class _Part:
                     return None
                 # Check for typos in config input_names list if here
                 raise ConfigError(
-                    f"Input name '{argument_name}' for {self._context.config.name} "
+                    f"Input name '{argument_name}' for {self._context.config.full_name} "
                     "must be mapped to the name of some experiment data"
                 )
         value = self._context.manager._get_data(global_name)
+        # Note: isinstance() cannot handle nested types like list[int]
         if allow is not None and not any(isinstance(value, t) for t in allow):
             # Input has unexpected type
             raise ValueError(
                 f"Experiment data '{global_name}' for the input "
-                f"'{argument_name}' of {self._context.config.name} has the wrong "
+                f"'{argument_name}' of {self._context.config.full_name} has the wrong "
                 f"type, {type(value).__name__}, list of allowed types: {allow}"
             )
         return value
@@ -141,7 +142,11 @@ class _Part:
     # self.set_output('my_arg', x)
     #
     # Example (output with global name fallback if no name mapping exists):
-    # self.set_output('my_tricky_arg_or_global', 'dangerous output', can_use_global=True)
+    # self.set_output(
+    #     'my_tricky_arg_or_global',
+    #     'possibly corrupted something else',
+    #     can_use_global=True
+    # )
     def set_output(
         self,
         argument_name: str,
@@ -160,7 +165,7 @@ class _Part:
                     return
                 # Check for typos in config outputs list if here
                 raise ConfigError(
-                        f"Output name '{argument_name}' for {self._context.config.name} "
+                        f"Output name '{argument_name}' for {self._context.config.full_name} "
                         "must be mapped to the name of some experiment data"
                     )
         self._context.manager._set_data(global_name, value)
@@ -224,7 +229,7 @@ class Flow(_Part):
 
     # NOTE: YOU must implement this in your class definition.
     # ExperimentManager calls this when it enters your flow.
-    # You need to setup your flow's parts then return the (relative)
+    # You need to setup your flow's parts then return the (short)
     # name of the first part of your flow for the ExperimentManager
     # to run, or "done" to leave the flow right away or "quit"
     # to end the entire experiment or None to have the researcher
@@ -246,34 +251,40 @@ class Flow(_Part):
         raise TypeError("Cannot set an output in a flow")
     
     # Helper functions you can call to manage your flow
-    # Note: an absolute part name is the full name of the part
-    # including all parent flows, e.g. "a.b.c" refers to the part
-    # "c" in the flow "a.b". A relative part name is the name
-    # of the part without any parent flows, e.g. "c" refers to
-    # the same part as "a.b.c". We use relative part names for
-    # these helpers.
+    # Note: a part's full name includes all parent flows, while
+    # a part's short name is just the part's own name.
+    # e.g. "a.b.c" is the full name for part "c" in the flow "a.b".
+    # We use short names for these helpers since a flow should
+    # only know about and be managing its own parts.
 
-    def add_part(self, raw_config: dict) -> None:
+    def get_start_here(self) -> str | None:
+        # Get the short name of the part to start with
+        # when this flow is entered, or None if not configured.
+        return self._context.config.start_here
+
+    def list_part_names(self) -> list[str]:
+        # List the short names for all parts in the current flow.
+        # Note: does not include parts in nested flows.
+        return self._context.manager._get_flow_parts_short_names(self.get_full_name())
+
+    def get_part(self, part_short_name: str) -> _Part | None:
+        # Access a part object from the current flow, returns None
+        # if the part does not exist.
+        return self._context.manager._get_part(f"{self.get_full_name()}.{part_short_name}")
+
+    def add_part(self, part_config: PartConfig) -> None:
         # Construct a new part with the given config data then add
         # it into the current flow. If a part already exists in the flow
         # with the same name then that part is replaced with the new one.
         # Raises a ConfigError if the config is found to be invalid.
-        pass # TODO implement
+        # Check the part_config.full_name to ensure it is in this flow.
+        if not part_config.full_name.startswith(f"{self.get_full_name()}."):
+            raise ConfigError(
+                f"Cannot add part '{part_config.full_name}' to flow '{self.get_full_name()}', "
+                "a part's full name must start with its flow's full name"
+            )
+        self._context.manager._add_part(part_config)
 
-    def remove_part(self, relative_part_name: str) -> None:
+    def remove_part(self, part_short_name: str) -> None:
         # Remove a part from the current flow, does nothing if the part does not exist.
-        pass # TODO implement
-
-    def list_part_names(self) -> list[str]:
-        # List the relative part names for all parts in the current flow.
-        pass # TODO implement
-
-    def get_part(self, relative_part_name: str) -> _Part | None:
-        # Access a part object from the current flow, returns None
-        # if the part does not exist.
-        pass # TODO implement
-
-    def get_part_type_info(self, relative_part_name: str) -> PartTypeInfo | None:
-        # Get the type information for a part from the current flow with the
-        # given name.
-        pass # TODO implement
+        self._context.manager._remove_part(f"{self.get_full_name()}.{part_short_name}")

@@ -37,38 +37,40 @@ def execute_statement_with_data_values(statement: str, data_values: dict[str, ob
     except Exception as e:
         raise ValueError(f"Error evaluating statement '{statement}': {e}")
 
-def extract_parts(
+def extract_part_configs(
        file_path: str,
-       config: dict
+       part_table: dict,
+       parent_full_name: str
     ) -> dict[str, PartConfig]:
     """
-    Extract all part configurations from config file data.
-    Returns a dictionary mapping part names to their configurations.
+    Extract all part configurations from a part table.
+    Returns a dictionary mapping part full names to their configurations.
     """
-    part_table = config.get("part", {})
     parts = {}
     for top_level_name, top_level_part in part_table.items():
         if top_level_name == "start_here":
             continue
+        name_path = top_level_name if not parent_full_name\
+            else f"{parent_full_name}.{top_level_name}"
         parts.update(
-            _extract_part_configs(
+            _extract_part_configs_recursive(
                 file_path=file_path,
                 raw_table=top_level_part,
-                name_path=top_level_name
+                name_path=name_path
             )
         )
     return parts
 
 # Private helpers
 
-def _extract_part_configs(
+def _extract_part_configs_recursive(
     file_path: str,
     raw_table: dict,
     name_path: str
 ) -> dict[str, PartConfig]:
-    # Helper for extract_parts that extracts nested part configurations
+    # Helper for extract_part_configs that extracts nested part configurations
     # recursively and flattens the part tables into a single dictionary
-    # with dot notation (e.g. part.subflow_1.subflow_2.my_step).
+    # with dot notation (e.g. subflow_1.subflow_2.my_step).
 
     # Do NOT use these reserved keywords in your part naming
     # (i.e. don't include "type_name" or "config_values" in your part name
@@ -94,7 +96,7 @@ def _extract_part_configs(
     # part.
     part = PartConfig(
         file_path=file_path,
-        name=name_path,
+        full_name=name_path,
         raw=raw_table,
         type_name=raw_table.get("type_name"),
         next_part=next_part,
@@ -107,7 +109,7 @@ def _extract_part_configs(
     for sub_key, sub_value in raw_table.items():
         if sub_key not in reserved_keys:
             nested_parts.update(
-                _extract_part_configs(
+                _extract_part_configs_recursive(
                     file_path=file_path,
                     raw_table=sub_value,
                     name_path=f"{name_path}.{sub_key}"
