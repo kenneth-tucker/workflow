@@ -6,28 +6,38 @@ Workflow is a utility for configuring and managing
 simulation experiments. Workflow sets up an experiment
 using a config file, then runs the experiment as
 a series of steps and decision points. It organizes
-all output files for you and records the experiment
-progress in a trace file, for later review or rerun.
+output files for you and records the experiment progress
+in a trace file.
 
 
 ## Config File
 
-Defines the parameters of the overall experiment,
-initial experiment state, and the specific steps and
-decisions involved in the experiment.
-
-A config file is specified when running the Workflow
-utility command `workflow.py <config_file.toml>`. An
+A TOML config file is specified when running the Workflow
+command script `workflow.py <config_file.toml>`. An
 example config file config_files/examples/demo/demo_config.toml
-is provided. The TOML format is recommended because it
-is simple yet versatile, similar the INI format but
-expanded. See  https://toml.io/en/v1.0.0 for more info
-about the TOML format.
+is provided.
+
+The config file defines the parameters of the overall
+experiment, the initial experiment state, and the specific
+steps and decisions involved in the experiment.
 
 
 ## Output Files
 
-The tree structure of the output files is hierarchical.
+The out_dir you specify in the config file tells Workflow
+where you like to save the results of running experiments,
+in general or for a particular project. When you run
+Workflow it will create a subdirectory in the out_dir with
+your experiment's name, then another subdirectory in that
+with the run number for the experiment. For example, if
+you specify an outdir of /home/username/my_project/my_results
+and the experiment name is experiment_a and it is the 
+first time running that experiment, Workflow will save files
+to /home/username/my_project/my_results/experiment_a/run_1.
+Workflow determines the run number based on the highest number
+run in the experiment directory. If a relative path is provided
+it will be treated as relative to the directory that contains
+the config file.
 
 TODO clean up this description
 
@@ -44,30 +54,34 @@ control_1 dataset.
 
 ### Trace File
 
-A trace JSON file is output such that a run of an 
+A JSON trace file is output such that a run of an 
 experiment can be recorded and reproduced. This
 records all steps performed by Workflow as well as
 state changes and decisions. The file is intended
 to be read/written by the utility while still being
-understandable by a human.
+understandable by a human. Data is streamed to the
+file while the experiment is running, so it can
+be watched with the "tail -f" command on Linux or
+by consumed by visualization tools.
 
 
 ## Data
 
 Workflow's ExperimentManager maintains experiment state
 in a data dictionary with name-value pairs. Any type of
-data can be saved, but common types should be defined
-as classes in the data/ directory. It uses dot notation
-to represent nested data, which is recommended for saving
-state that is specific to a particular step of the
-experiment, or should be stored on consecutive runs of
-the same step (e.g. step_1.my_data). A missing data is
+data can be saved, but consider putting commonly used
+types in the data_types/ directory. Also, make sure the
+data is serializable to JSON if you want it to be
+recorded correctly in the trace file. Data is global for
+the whole experiment but consider using dot and 
+underscore notations to represent nested and internal data,
+respectively (e.g. my_part._my_state). A missing data is
 represented by None so that should be checked for,
-along with the type, as needed by the implementation
-of the experiment parts. It is important to use the
+along with the type, as needed. It is important to use the
 API for reading inputs and writing outputs so as to
 maintain a coherent state and record all data changes
-to the trace file.
+to the trace file. Do NOT try to bypass these unless you
+like dealing with buggy and brittle experiments.
 
 
 ## Experiment Parts
