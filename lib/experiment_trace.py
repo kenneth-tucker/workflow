@@ -191,6 +191,14 @@ class ExperimentTrace:
             json.dump(entry_dict, self.output_trace_file)
             self.output_trace_file.flush()
 
+    # Get the full list of part names in the path taken through the experiment
+    def get_part_path(self) -> list[str]:
+        part_path = []
+        for entry in self.trace:
+            if isinstance(entry, AtPartEntry):
+                part_path.append(entry.part_name)
+        return part_path
+
     # Private helper methods
 
     def _load_input_trace(self):

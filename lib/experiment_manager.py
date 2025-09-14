@@ -48,25 +48,72 @@ class ExperimentManager:
         mode: ExperimentMode,
         old_trace: Optional[ExperimentTrace] = None
     ) -> None:
+        # Setup for retracing an old run's path, part by part, if needed
+        if mode in {ExperimentMode.RERUN, ExperimentMode.CONTINUE}:
+            if old_trace is None:
+                raise ValueError("old_trace must be provided when mode is RERUN or CONTINUE")
+            old_part_path = old_trace.get_part_path()
+            if mode == ExperimentMode.CONTINUE:
+                # Replace quit with None so we can continue
+                if len(old_part_path) > 0 and old_part_path[-1] == "quit":
+                    old_part_path[-1] = None
+                else:
+                    old_part_path.append(None)
+        else:
+            old_part_path = []
+        
+        # Setup the new experiment run
         self._begin_experiment_run()
-        # Ensure the trace will be closed correctly
+
+        # Ensure the new trace will be closed correctly
         with self.experiment_trace:
+
+            # Run the experiment, part by part
+            path_index = 0
             current_part_full_name = self.config.initial_part_name
             while current_part_full_name != "quit":
+
+                # If we are (still) retracing an old run, check we are on the same path
+                if path_index < len(old_part_path) and \
+                    old_part_path[path_index] != current_part_full_name:
+                    raise ValueError(
+                        f"Path deviation at index {path_index} while retracing old run: "
+                        f"expected '{old_part_path[path_index]}', got '{current_part_full_name}'"
+                    )
+
+                # Always record the part (or command) we are at
                 self.experiment_trace.record(
                     AtPartEntry(
                         datetime.now(),
                         current_part_full_name
                     )
                 )
+
+                # Handle the current part or command
                 if current_part_full_name == "done":
                     next_part_short_name = self._end_flow()
                 elif current_part_full_name is None or \
                     current_part_full_name not in self.experiment_parts:
-                    next_part_short_name = self._get_researcher_decision(current_part_full_name)
+                    if path_index < len(old_part_path):
+                        # If retracing, use the past researcher's decision from the old run
+                        next_part_short_name = old_part_path[path_index + 1]
+                    else:
+                        # Ask the current researcher what to do next
+                        next_part_short_name = self._get_researcher_decision(current_part_full_name)
                 else:
                     next_part_short_name = self._run_part(current_part_full_name)
+
+                # Move to the next part or command
+                path_index += 1
                 current_part_full_name = self._convert_to_full_name(next_part_short_name)
+
+            # Tear down the experiment run
+            self.experiment_trace.record(
+                AtPartEntry(
+                    datetime.now(),
+                    "quit"
+                )
+            )
             for flow_full_name in reversed(self.flow_stack):
                 self._end_flow()
             self._end_experiment_run()
@@ -172,7 +219,7 @@ class ExperimentManager:
             flow_part = self.experiment_parts[flow_part_full_name]
             try:
                 flow_part.end_flow()
-                next_part_short_name = flow_part._context.config.next_part.get("")
+                next_part_short_name = flow_part._context.config.next_part.get()
                 self.experiment_trace.record(
                     FlowEndEntry(
                         datetime.now(),
