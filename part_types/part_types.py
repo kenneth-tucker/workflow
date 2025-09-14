@@ -3,6 +3,7 @@ from part_types.decision.conditional import ConditionalDecision
 from part_types.flow.load import LoadFlow
 from part_types.flow.manual import ManualFlow
 from part_types.flow.standard import StandardFlow
+from part_types.step.dump import DumpStep
 from part_types.step.terminal import TerminalStep
 
 # All of the types of parts for experiments go here
@@ -32,6 +33,10 @@ part_types = {
     ),
 
     # Step types
+    "step.dump": PartTypeInfo(
+        type=DumpStep,
+        description="Show the experiment data"
+    ),
     "step.terminal": PartTypeInfo(
         type=TerminalStep,
         description="Show a prompt and get input"

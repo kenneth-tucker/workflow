@@ -12,6 +12,8 @@ out_dir = "../../../my_results/examples"
 # part_types_py = "optional/path/to/part/types/py/file"
 [experiment.initial_values]
 researcher = "Bob"
+some_number = 42
+some_list = ["red", "yellow", "blue"]
 
 
 [part]
@@ -32,10 +34,11 @@ next_part = "decide_option"
 prompt = """
 
 Enter 1 to change your name
-Enter 2 to use a calculator
-Enter 3 to load in a config
-Enter 4 to enter manual mode
-Enter 5 to quit
+Enter 2 to see the experiment data
+Enter 3 to use a calculator
+Enter 4 to load in a config
+Enter 5 to enter manual mode
+Enter 6 to quit
 
 > """
 enter = "int"
@@ -46,10 +49,11 @@ to = "menu_option"
 type_name = "decision.conditional"
 [part.decide_option.next_part]
 option_1 = "name_change"
-option_2 = "my_calculator"
-option_3 = "load_prompt"
-# option_4 assumed None since absent   
-option_5 = "quit"
+option_2 = "dump"
+option_3 = "my_calculator"
+option_4 = "load_prompt"
+# option_5 assumed None since absent   
+option_6 = "quit"
 try_again = "menu"
 [part.decide_option.config_values]
 statements = [
@@ -58,6 +62,7 @@ statements = [
     "option_3 if {menu_option} == 3",
     "option_4 if {menu_option} == 4",
     "option_5 if {menu_option} == 5",
+    "option_6 if {menu_option} == 6",
     "else try_again"
 ]
 
@@ -69,6 +74,11 @@ next_part = "greeting"
 prompt = "Enter your new name: "
 enter = "str"
 to = "researcher"
+
+
+[part.dump]
+type_name = "step.dump"
+next_part = "menu"
 
 
 [part.my_calculator]
