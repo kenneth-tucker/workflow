@@ -45,6 +45,16 @@ class ExperimentEndEntry(TraceEntry):
         self.experiment_name = experiment_name
         self.run_number = run_number
 
+# Trace entry for going to a new part
+class AtPartEntry(TraceEntry):
+    def __init__(
+        self,
+        timestamp: datetime,
+        part_name: str
+    ):
+        super().__init__(timestamp, "at_part")
+        self.part_name = part_name
+
 # Trace entry for error encountered while running a part
 class ErrorEntry(TraceEntry):
     def __init__(
@@ -210,6 +220,11 @@ class ExperimentTrace:
                         timestamp=timestamp,
                         experiment_name=entry["experiment_name"],
                         run_number=entry["run_number"]
+                    ))
+                case "at_part":
+                    self.parsed_input.append(AtPartEntry(
+                        timestamp=timestamp,
+                        part_name=entry["part_name"]
                     ))
                 case "error":
                     self.parsed_input.append(ErrorEntry(

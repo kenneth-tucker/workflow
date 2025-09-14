@@ -8,7 +8,7 @@ from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartConfig, PartContext, PartTypeInfo
 from lib.experiment_config import ExperimentConfig
 from lib.experiment_parts import _Part, Step, Decision, Flow
-from lib.experiment_trace import ExperimentTrace, \
+from lib.experiment_trace import AtPartEntry, ExperimentTrace, \
     ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, PartAddEntry, PartRemoveEntry, \
     ResearcherDecisionEntry, StepEntry, DecisionEntry, \
     FlowBeginEntry, FlowEndEntry
@@ -48,12 +48,17 @@ class ExperimentManager:
         mode: ExperimentMode,
         old_trace: Optional[ExperimentTrace] = None
     ) -> None:
-        # TODO handle mode where we are re-running an old trace and deal
         self._begin_experiment_run()
         # Ensure the trace will be closed correctly
         with self.experiment_trace:
             current_part_full_name = self.config.initial_part_name
             while current_part_full_name != "quit":
+                self.experiment_trace.record(
+                    AtPartEntry(
+                        datetime.now(),
+                        current_part_full_name
+                    )
+                )
                 if current_part_full_name == "done":
                     next_part_short_name = self._end_flow()
                 elif current_part_full_name is None or \
