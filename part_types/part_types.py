@@ -4,6 +4,7 @@ from part_types.flow.load import LoadFlow
 from part_types.flow.manual import ManualFlow
 from part_types.flow.standard import StandardFlow
 from part_types.step.dump import DumpStep
+from part_types.step.expression import ExpressionStep
 from part_types.step.terminal import TerminalStep
 
 # All of the types of parts for experiments go here
@@ -36,6 +37,10 @@ part_types = {
     "step.dump": PartTypeInfo(
         type=DumpStep,
         description="Show the experiment data"
+    ),
+    "step.expression": PartTypeInfo(
+        type=ExpressionStep,
+        description="Calculate expressions and store results"
     ),
     "step.terminal": PartTypeInfo(
         type=TerminalStep,
