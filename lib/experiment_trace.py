@@ -116,6 +116,33 @@ class FlowEndEntry(TraceEntry):
         super().__init__(timestamp, "flow_end")
         self.flow_name = flow_name
 
+# Trace adding a part to the experiment
+class PartAddEntry(TraceEntry):
+    def __init__(
+        self,
+        timestamp: datetime,
+        part_full_name: str,
+        part_type_name: str,
+        part_category: str,
+    ):
+        allowed_categories = {"step", "decision", "flow"}
+        if part_category not in allowed_categories:
+            raise ValueError(f"part_category must be one of {allowed_categories}, got '{part_category}'")
+        super().__init__(timestamp, "part_add")
+        self.part_full_name = part_full_name
+        self.part_type_name = part_type_name
+        self.part_category = part_category
+
+# Trace removing a part from the experiment
+class PartRemoveEntry(TraceEntry):
+    def __init__(
+        self,
+        timestamp: datetime,
+        part_full_name: str,
+    ):
+        super().__init__(timestamp, "part_remove")
+        self.part_full_name = part_full_name
+
 # The class for tracing the execution of an experiment.
 # It reads and writes JSON files.
 class ExperimentTrace:
@@ -218,6 +245,18 @@ class ExperimentTrace:
                     self.parsed_input.append(FlowEndEntry(
                         timestamp=timestamp,
                         flow_name=entry["flow_name"]
+                    ))
+                case "part_add":
+                    self.parsed_input.append(PartAddEntry(
+                        timestamp=timestamp,
+                        part_full_name=entry["part_full_name"],
+                        part_type_name=entry["part_type_name"],
+                        part_category=entry["part_category"]
+                    ))
+                case "part_remove":
+                    self.parsed_input.append(PartRemoveEntry(
+                        timestamp=timestamp,
+                        part_full_name=entry["part_full_name"]
                     ))
                 case _:
                     raise ValueError(f"Unknown trace entry type: {entry.get('event')}")

@@ -123,6 +123,39 @@ class _Part:
             )
         return value
     
+    def copy_experiment_data(self) -> dict:
+        # Get a copy of the entire experiment data dictionary
+        return self._context.manager._copy_experiment_data()
+
+# Base classes for Steps, Decisions, and Flows.
+# Inherit from these and pass in the context
+# to the constructor. You MUST implement some
+# methods in your subclass (see below).
+#
+# Example:
+# class MyStep(Step):
+#     def __init__(self, context):
+#         super().__init__(context)
+#         ...
+#
+#     @override
+#     def run_step(self) -> None:
+#         ...
+
+# A step to run in the experiment. Can modify the experiment data.
+class Step(_Part):
+    def __init__(self, context: PartContext):
+        super().__init__(context)
+
+    # NOTE: YOU must implement this in your class definition.
+    # ExperimentManager calls this to run your step's procedure.
+    # It might be run multiple times during the experiment so
+    # be sure to reset any state between calls.
+    def run_step(self) -> None:
+        raise NotImplementedError("Must implement the run_step method in your subclass")
+
+    # Helper functions you can call in your step
+
     # Write an output argument with the given value. Raises a
     # ConfigError if the argument is not assigned. You can make
     # the argument optional with the 'optional' flag, in which
@@ -170,33 +203,6 @@ class _Part:
                     )
         self._context.manager._set_data(global_name, value)
 
-# Base classes for Steps, Decisions, and Flows.
-# Inherit from these and pass in the context
-# to the constructor. You MUST implement some
-# methods in your subclass (see below).
-#
-# Example:
-# class MyStep(Step):
-#     def __init__(self, context):
-#         super().__init__(context)
-#         ...
-#
-#     @override
-#     def run_step(self) -> None:
-#         ...
-
-# A step to run in the experiment. Can modify the experiment data.
-class Step(_Part):
-    def __init__(self, context: PartContext):
-        super().__init__(context)
-
-    # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this to run your step's procedure.
-    # It might be run multiple times during the experiment so
-    # be sure to reset any state between calls.
-    def run_step(self) -> None:
-        raise NotImplementedError("Must implement the run_step method in your subclass")
-
 # A decision point in the experiment. A Decision subclass
 # should NOT modify anything, it should just decide what
 # part of the experiment we want to do next.
@@ -213,13 +219,6 @@ class Decision(_Part):
     # manually decide what's next.
     def decide_route(self) -> str | None:
         raise NotImplementedError("Must implement the decide_route method in your subclass")
-    
-    @override
-    def set_output(self, argument_name, value, optional = False, can_use_global = False):
-        # You should NOT be setting outputs in a decision type,
-        # the ExperimentManager assumes only step types modify
-        # the experiment data.
-        raise TypeError("Cannot set an output in a decision")
 
 # A flow sets up and contains related parts. A Flow subclass
 # should NOT modify anything other than the parts it contains.
@@ -242,13 +241,6 @@ class Flow(_Part):
     # You need to perform any necessary cleanup here.
     def end_flow(self) -> None:
         raise NotImplementedError("Must implement the end_flow method in your subclass")
-
-    @override
-    def set_output(self, argument_name, value, optional = False, can_use_global = False):
-        # You should NOT be setting outputs in a flow type,
-        # the ExperimentManager assumes only step types modify
-        # the experiment data.
-        raise TypeError("Cannot set an output in a flow")
     
     # Helper functions you can call to manage your flow
     # Note: a part's full name includes all parent flows, while

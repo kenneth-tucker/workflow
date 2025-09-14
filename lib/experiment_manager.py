@@ -1,4 +1,4 @@
-import copy
+from copy import deepcopy
 from datetime import datetime
 import enum
 import os
@@ -9,7 +9,7 @@ from lib.utils.part_utils import PartConfig, PartContext, PartTypeInfo
 from lib.experiment_config import ExperimentConfig
 from lib.experiment_parts import _Part, Step, Decision, Flow
 from lib.experiment_trace import ExperimentTrace, \
-    ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, \
+    ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, PartAddEntry, PartRemoveEntry, \
     ResearcherDecisionEntry, StepEntry, DecisionEntry, \
     FlowBeginEntry, FlowEndEntry
 
@@ -71,13 +71,10 @@ class ExperimentManager:
     def _begin_experiment_run(self) -> None:
         # (Re)initialize the experiment state
         self.flow_stack: list[str] = []
-        self.experiment_data = copy.deepcopy(self.config.initial_values)
-        self.new_experiment_data = copy.deepcopy(self.config.initial_values)
-        self._construct_parts()
+        self.experiment_data = deepcopy(self.config.initial_values)
+        self.new_experiment_data = deepcopy(self.config.initial_values)
         self._build_output_dirs()
-        self.experiment_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
-        print(f"Creating experiment trace file: {self.experiment_trace_file_path}")
-        self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
+        self._construct_parts()
         print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started")
         self.experiment_trace.record(
             ExperimentBeginEntry(
@@ -101,9 +98,9 @@ class ExperimentManager:
         # Try to run the current part, returns the name of the next part, None, or a command
         next_part_short_name = None
         try:
-            # Make a deepcopy of the experiment data so the original is
+            # Make a copy of the experiment data so the original is
             # preserved if the current part encounters an error when it runs.
-            self.new_experiment_data = copy.deepcopy(self.experiment_data)
+            self.new_experiment_data = deepcopy(self.experiment_data)
 
             # Handle the current part
             current_part = self.experiment_parts[current_part_full_name]
@@ -147,7 +144,7 @@ class ExperimentManager:
                 raise TypeError(f"Unknown part type: {type(current_part)}")
             
             # Update the experiment data to the new data after a successful run
-            self.experiment_data = copy.deepcopy(self.new_experiment_data)
+            self.experiment_data = deepcopy(self.new_experiment_data)
         except Exception as e:
             print(f"Error while running part '{current_part_full_name}': {e}")
             self.experiment_trace.record(
@@ -217,6 +214,10 @@ class ExperimentManager:
         # Set the global experiment data to the given value
         self.new_experiment_data[global_name] = value
 
+    def _copy_experiment_data(self) -> dict:
+        # Get the experiment data for the given name, returns None if not found
+        return deepcopy(self.new_experiment_data)
+
     def _add_part(self, part_config: PartConfig) -> None:
         # Try to construct a new part with the given config data then add
         # it into the experiment. If a part already exists in the flow
@@ -225,12 +226,29 @@ class ExperimentManager:
             part_type = self.config.part_types.get(part_config.type_name)
             part_context = PartContext(self, part_config)
             self.experiment_parts[part_config.full_name] = part_type.type(part_context)
+            self.experiment_trace.record(
+                PartAddEntry(
+                    datetime.now(),
+                    part_config.full_name,
+                    part_config.type_name,
+                    "step" if issubclass(part_type.type, Step) else
+                    "decision" if issubclass(part_type.type, Decision) else
+                    "flow" if issubclass(part_type.type, Flow) else
+                    "unknown"
+                )
+            )
         except Exception as e:
             raise ConfigError(f"Failed to add part '{part_config.full_name}': {e}")
 
     def _remove_part(self, part_full_name: str) -> None:
         # Remove the part with the given name, if it exists
         self.experiment_parts.pop(part_full_name, None)
+        self.experiment_trace.record(
+            PartRemoveEntry(
+                datetime.now(),
+                part_full_name
+            )
+        )
 
     def _get_part(self, part_full_name: str) -> _Part | None:
         # Get the part with the given name, returns None if not found
@@ -263,6 +281,10 @@ class ExperimentManager:
         os.makedirs(self.out_dir_for_run, exist_ok=False)
         # Copy the config file to the new directory
         shutil.copy(self.config.file_path, os.path.join(self.out_dir_for_run, "config.toml"))
+        # Create the experiment trace file
+        self.experiment_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
+        print(f"Creating experiment trace file: {self.experiment_trace_file_path}")
+        self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
 
     def _convert_to_full_name(self, short_name: str | None) -> str | None:
         full_name = None
