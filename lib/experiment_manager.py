@@ -26,10 +26,8 @@ class ExperimentMode(enum.Enum):
     # be continued from the last part before it ended
     CONTINUE = "continue"
 
+# Special commands that can be used in the experiment.
 COMMAND_NAMES = {
-    """
-    Special commands that can be used in the experiment.
-    """
     # Leave the current flow
     "done",
     # Quit the experiment
