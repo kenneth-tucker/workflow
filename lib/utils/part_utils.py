@@ -1,7 +1,9 @@
 from typing import Optional
 
-# Used to define a part type in the part_types dictionary
 class PartTypeInfo:
+    """
+    Information about a part type, used in the part_types dictionary.
+    """
     def __init__(
         self,
         type: type,
@@ -11,8 +13,10 @@ class PartTypeInfo:
         self.type = type
         self.description = description
 
-# Stores the parsed config data for an individual part
 class PartConfig:
+    """
+    Stores the parsed config data for an individual part.
+    """
     def __init__(
         self,
         file_path: str,
@@ -44,8 +48,10 @@ class PartConfig:
         # The output name to experiment data name mappings for this part
         self.output_names = output_names
 
-# The ExperimentManager uses this to setup your part
 class PartContext:
+    """
+    Context information passed to a part when it is initialized.
+    """
     def __init__(
         self,
         manager,

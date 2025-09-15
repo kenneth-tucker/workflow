@@ -5,12 +5,14 @@ from lib.experiment_parts import Flow
 from lib.utils.exceptions import ConfigError
 from lib.utils.parse_config import extract_part_configs
 
-# Load the part table from another config file as a flow.
-# Supports loading parts from a path given as a config value
-# (loaded one time when the flow is constructed), or from
-# the path given as an input variable to the flow (loaded
-# each time the flow begins).
 class LoadFlow(Flow):
+    """
+    A flow part that loads parts from a TOML config file.
+    The path to the config file can be given as a config value
+    (loaded one time when the flow is constructed), or from
+    the path given as an input variable to the flow (loaded
+    each time the flow begins).
+    """
     def __init__(self, context):
         super().__init__(context)
         self.initial_part_name = None
@@ -37,9 +39,12 @@ class LoadFlow(Flow):
     # Private helpers
 
     def _load_parts_from_file(self, path: str):
-        # Try to load the part table from the TOML config file at the given path.
-        # If the path is relative, it is relative to the config file that
-        # defined this LoadFlow part. Remove any old parts first.
+        """
+        Load parts from a TOML config file at the given path.
+
+        If the path is relative, it is relative to the config file that
+        defined this LoadFlow part. Any old parts are removed first.
+        """
         try:
             old_part_names = self.list_part_names()
             for part_name in old_part_names:

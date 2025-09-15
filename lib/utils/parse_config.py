@@ -68,9 +68,12 @@ def _extract_part_configs_recursive(
     raw_table: dict,
     name_path: str
 ) -> dict[str, PartConfig]:
-    # Helper for extract_part_configs that extracts nested part configurations
-    # recursively and flattens the part tables into a single dictionary
-    # with dot notation (e.g. subflow_1.subflow_2.my_step).
+    """
+    Recursive helper for extract_part_configs.
+
+    It extracts nested part configurations recursively and flattens
+    the part tables into a single dictionary with dot notation.
+    """
 
     # Do NOT use these reserved keywords in your part naming
     # (i.e. don't include "type_name" or "config_values" in your part name

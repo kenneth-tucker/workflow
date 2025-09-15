@@ -3,8 +3,16 @@ from lib.experiment_parts import Decision
 from lib.utils.exceptions import ConfigError
 from lib.utils.parse_config import execute_statement_with_data_values, extract_data_names
 
-# Decide a route using conditional statements
 class ConditionalDecision(Decision):
+    """
+    A decision part that decides which route to take based on conditional statements.
+    The statements are evaluated in order, and the first one that evaluates to true is taken.
+    Statements are of the form:
+        <route_name> if <condition>
+        ...
+        else <route_name>
+    where <condition> is a boolean expression containing experiment data names as {name}.
+    """
     def __init__(self, context):
         super().__init__(context)
         self.statements: list[str] = \
@@ -44,13 +52,6 @@ class ConditionalDecision(Decision):
         return None
 
     def _parse_statement(self, statement: str) -> dict:
-        # Parse statements of the forms:
-        #
-        # <route_name> if <condition>
-        # else <route_name>
-        #
-        # where <condition> is a boolean expression
-        # containing experiment data names as {name}
         parts = statement.split(" if ")
         parsed_statement = {}
         if len(parts) == 2:
@@ -71,7 +72,6 @@ class ConditionalDecision(Decision):
         return parsed_statement
 
     def _evaluate_condition(self, condition: str, data_values: dict) -> bool:
-        # Evaluate the condition using the provided data values
         try:
             return bool(execute_statement_with_data_values(condition, data_values))
         except Exception as e:

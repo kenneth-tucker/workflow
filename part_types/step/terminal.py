@@ -3,8 +3,13 @@ from lib.experiment_parts import Step
 from lib.utils.exceptions import ConfigError
 from lib.utils.parse_config import extract_data_names, insert_data_values
 
-# Show a prompt and get input
 class TerminalStep(Step):
+    """
+    A step part that shows a prompt in the terminal and optionally
+    gets input from the researcher.
+    The prompt can include experiment data names as {name}.
+    If the "enter" config is given, the input is converted to that type.
+    """
     def __init__(self, context):
         super().__init__(context)
         self.prompt: str = self.get_config("prompt", allow=[str])

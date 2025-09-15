@@ -3,8 +3,13 @@ from lib.experiment_parts import Step
 from lib.utils.exceptions import ConfigError
 from lib.utils.parse_config import execute_statement_with_data_values
 
-# Calculate expressions and store results
 class ExpressionStep(Step):
+    """
+    A step part that evaluates expressions and stores the results.
+    Expressions are of the form:
+        <data_name> = <expression>
+        where <expression> can use experiment data names as {name}.
+    """
     def __init__(self, context):
         super().__init__(context)
         self.statements: list[str] = \

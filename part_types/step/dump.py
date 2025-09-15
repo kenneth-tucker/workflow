@@ -1,7 +1,9 @@
 from lib.experiment_parts import Step
 
-# Show the experiment data
 class DumpStep(Step):
+    """"
+    A step part that prints all current experiment data to the console.
+    """
     def __init__(self, context):
         super().__init__(context)
 

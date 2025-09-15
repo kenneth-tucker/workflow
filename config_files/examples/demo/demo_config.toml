@@ -1,6 +1,5 @@
 # An example config file, demonstrating the TOML syntax
 # for defining an experiment to be run by Workflow.
-# See the annotated version for detailed explanations.
 #
 # See https://toml.io/en/ for more information.
 

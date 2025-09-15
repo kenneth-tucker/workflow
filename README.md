@@ -39,30 +39,17 @@ run in the experiment directory. If a relative path is provided
 it will be treated as relative to the directory that contains
 the config file.
 
-TODO clean up this description
-
-The first level for an experiment typically contains
-directories for each of the primary analyses produced by
-cpptraj. For example, control_1/, control_2/, control_3/,
-test_1/, test_2/, test_3/ would be present for an
-experiment with a control and a test condition and 3
-replicate simulations. Within each of these directories is
-the PDB file output of cpptraj along with directories for
-each of the secondary analyses, such as control_1/rmsd/
-for the output of the analyze_rmsd script on the
-control_1 dataset.
-
 ### Trace File
 
 A JSON trace file is output such that a run of an 
 experiment can be recorded and reproduced. This
 records all steps performed by Workflow as well as
 state changes and decisions. The file is intended
-to be read/written by the utility while still being
-understandable by a human. Data is streamed to the
-file while the experiment is running, so it can
+to be read/written by the utility and other supporting tools
+while still being understandable by a human. Data is streamed
+to the file while the experiment is running, so it can
 be watched with the "tail -f" command on Linux or
-by consumed by visualization tools.
+by consumed by visualization tools in real time.
 
 
 ## Data
@@ -75,13 +62,13 @@ data is serializable to JSON if you want it to be
 recorded correctly in the trace file. Data is global for
 the whole experiment but consider using dot and 
 underscore notations to represent nested and internal data,
-respectively (e.g. my_part._my_state). A missing data is
+respectively (e.g. my_part._private_data). A missing data is
 represented by None so that should be checked for,
 along with the type, as needed. It is important to use the
-API for reading inputs and writing outputs so as to
-maintain a coherent state and record all data changes
-to the trace file. Do NOT try to bypass these unless you
-like dealing with buggy and brittle experiments.
+API in experiment_parts.py for reading inputs and writing
+outputs so as to maintain a coherent state and record all
+data changes to the trace file. Do NOT try to bypass these
+unless you like dealing with buggy and brittle experiments.
 
 
 ## Experiment Parts
@@ -116,15 +103,16 @@ A 'flow' is a grouping of steps, decisions, and other flows.
 Each type of flow is defined as a class in the part_types/flow
 directory. Flows can be used to represent common sections of
 experiments. Flows can also give special behavior to their
-contained steps. For example, the 'parallel' flow runs all
-the steps it contains in separate sub-processes to speed up
-processing time.
+contained steps. For example, the 'load' flow copies all the
+parts from another config file before running them.
 
 If the manager encounters a situation where the 'next' part
 of the experiment is None or invalid, or if a step/decision
 crashes with an uncaught exception, it will prompt the
-researcher to specify the identifier of the experiment
-to go next or to end the experiment.
+researcher to specify the part of the experiment to go next
+or to end the experiment.
+
+### Creating Parts
 
 When adding a new step, decision, or flow be sure to put
 the class name in the 'part_types' dictionary in part_types.py.

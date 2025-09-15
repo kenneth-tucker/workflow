@@ -13,8 +13,10 @@ from lib.experiment_trace import AtPartEntry, ExperimentTrace, \
     ResearcherDecisionEntry, StepEntry, DecisionEntry, \
     FlowBeginEntry, FlowEndEntry
 
-# How to run the ExperimentManager
 class ExperimentMode(enum.Enum):
+    """
+    The various modes in which an experiment can be run.
+    """
     # Start a new experiment
     NORMAL = "normal"
     # Try to re-run an old experiment based on its trace,
@@ -24,30 +26,35 @@ class ExperimentMode(enum.Enum):
     # be continued from the last part before it ended
     CONTINUE = "continue"
 
-# Special commands that are not treated as names of parts
 COMMAND_NAMES = {
+    """
+    Special commands that can be used in the experiment.
+    """
     # Leave the current flow
     "done",
     # Quit the experiment
     "quit"
 }
 
-# This class manages the execution of an experiment
 class ExperimentManager:
-    # Configure the manager for running a particular type of experiment
+    """
+    Manages the running of an experiment
+    """
     def __init__(
         self,
         config: ExperimentConfig
     ):
         self.config = config
 
-    # Run the experiment one time, part by part
-    # Note: can be called multiple times to re-run the experiment
     def run(
         self,
         mode: ExperimentMode,
         old_trace: Optional[ExperimentTrace] = None
     ) -> None:
+        """
+        Run the experiment one time, part by part.
+        """
+
         # Setup for retracing an old run's path, part by part, if needed
         if mode in {ExperimentMode.RERUN, ExperimentMode.CONTINUE}:
             if old_trace is None:
@@ -121,7 +128,9 @@ class ExperimentManager:
     # Private helper methods, only the library code should use these
 
     def _begin_experiment_run(self) -> None:
-        # (Re)initialize the experiment state
+        """
+        (Re)initialize the experiment state for a new run.
+        """
         self.flow_stack: list[str] = []
         self.experiment_data = deepcopy(self.config.initial_values)
         self.new_experiment_data = deepcopy(self.config.initial_values)
@@ -147,7 +156,11 @@ class ExperimentManager:
         )
 
     def _run_part(self, current_part_full_name: str) -> str | None:
-        # Try to run the current part, returns the name of the next part, None, or a command
+        """
+        Run the current part of the experiment.
+
+        Returns the name of the next part to run, or a special command.
+        """
         next_part_short_name = None
         try:
             # Make a copy of the experiment data so the original is
@@ -211,7 +224,11 @@ class ExperimentManager:
         return next_part_short_name
 
     def _end_flow(self) -> str | None:
-        # End the current flow, returns the name of the next part, None, or a command
+        """
+        End the current flow and return to the parent flow.
+
+        Returns the name of the next part to run, or a special command.
+        """
         next_part_short_name = None
         if len(self.flow_stack) > 0:
             # End the current flow and return to the parent flow
@@ -219,7 +236,7 @@ class ExperimentManager:
             flow_part = self.experiment_parts[flow_part_full_name]
             try:
                 flow_part.end_flow()
-                next_part_short_name = flow_part._context.config.next_part.get()
+                next_part_short_name = flow_part._context.config.next_part.get("")
                 self.experiment_trace.record(
                     FlowEndEntry(
                         datetime.now(),
@@ -243,7 +260,11 @@ class ExperimentManager:
         return next_part_short_name
 
     def _get_researcher_decision(self, current_part_full_name: str) -> str:
-        # The researcher needs to tell us what to do next
+        """
+        Get the researcher's decision on what to do next.
+
+        Returns the name of the next part to run, or a special command.
+        """
         self._print_flow_info()
         if current_part_full_name is None:
             print("\nNo part specified\n")
@@ -259,21 +280,29 @@ class ExperimentManager:
         return next_part_short_name
 
     def _get_data(self, global_name: str) -> object | None:
-        # Get the global experiment data, returns None if not found
+        """
+        Get the global experiment data, returns None if not found
+        """
         return self.new_experiment_data.get(global_name)
 
     def _set_data(self, global_name: str, value: object) -> None:
-        # Set the global experiment data to the given value
+        """
+        Set the global experiment data to the given value
+        """
         self.new_experiment_data[global_name] = value
 
     def _copy_experiment_data(self) -> dict:
-        # Get the experiment data for the given name, returns None if not found
+        """
+        Get a copy of the current experiment data.
+        """
         return deepcopy(self.new_experiment_data)
 
     def _add_part(self, part_config: PartConfig) -> None:
-        # Try to construct a new part with the given config data then add
-        # it into the experiment. If a part already exists in the flow
-        # with the same name then that part is replaced with the new one.
+        """
+        Add a new part to the experiment.
+
+        If a part with the same name already exists, it is replaced.
+        """
         try:
             part_type = self.config.part_types.get(part_config.type_name)
             part_context = PartContext(self, part_config)
@@ -293,7 +322,9 @@ class ExperimentManager:
             raise ConfigError(f"Failed to add part '{part_config.full_name}': {e}")
 
     def _remove_part(self, part_full_name: str) -> None:
-        # Remove the part with the given name, if it exists
+        """
+        Remove the part with the given name from the experiment.
+        """
         self.experiment_parts.pop(part_full_name, None)
         self.experiment_trace.record(
             PartRemoveEntry(
@@ -303,20 +334,27 @@ class ExperimentManager:
         )
 
     def _get_part(self, part_full_name: str) -> _Part | None:
-        # Get the part with the given name, returns None if not found
+        """
+        Get the part with the given name, returns None if not found
+        """
         return self.experiment_parts.get(part_full_name)
 
     def _construct_parts(self) -> None:
-        # Construct instances of each part of the experiment as
-        # specified in the configuration and part_types dictionary
+        """
+        Construct instances of each part of the experiment as
+        specified in the configuration and part_types dictionary
+        """
         self.experiment_parts: dict[str, _Part] = {}
         for _, part_config in self.config.part_configs.items():
             self._add_part(part_config)
 
     def _build_output_dirs(self) -> None:
-        # Build the output directory structure for this run
-        # Note: this method figures out the run number by looking at
-        # the existing runs in the output directory
+        """
+        Build the output directory structure for this run.
+
+        Note: this method figures out the run number by looking at
+        the existing runs in the output directory.
+        """
         print("Setting up output directories...")
         out_dir_for_experiment = os.path.join(self.config.out_dir, self.config.experiment_name)
         os.makedirs(out_dir_for_experiment, exist_ok=True)
@@ -339,6 +377,9 @@ class ExperimentManager:
         self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
 
     def _convert_to_full_name(self, short_name: str | None) -> str | None:
+        """
+        Convert a short part name to a full part name based on the current flow.
+        """
         full_name = None
         flow_full_name = self._get_current_flow_full_name()
         if short_name is None or \
@@ -350,11 +391,15 @@ class ExperimentManager:
         return full_name
 
     def _get_current_flow_full_name(self) -> str:
-        # Get the full name of the current flow we are in
+        """
+        Get the full name of the current flow we are in.
+        """
         return self.flow_stack[-1] if len(self.flow_stack) > 0 else ""
     
     def _get_flow_parts_short_names(self, flow_full_name: str) -> list[str]:
-        # Get the short names of the parts that are in the flow with the given name
+        """
+        Get the short names of the parts that are in the flow with the given name.
+        """
         flow_parts_short_names = []
         for part_full_name in self.experiment_parts.keys():
             if not flow_full_name:
@@ -370,7 +415,9 @@ class ExperimentManager:
         return flow_parts_short_names
 
     def _print_flow_info(self) -> None:
-        # Show the researcher where they are and what parts are available
+        """
+        Show the researcher where they are and what parts are available.
+        """
         flow_full_name = self._get_current_flow_full_name()
         if not flow_full_name:
             print(f"You are in the top-level flow of experiment '{self.config.experiment_name}', which has these parts:")
@@ -382,9 +429,9 @@ class ExperimentManager:
             print(f" - {short_name} : {self.experiment_parts[full_name]._context.config.type_name}")
 
     def _get_next_from_researcher(self) -> str:
-        # Prompt the researcher for what to do next.
-        # Returns the full name of the part to run
-        # next or a special command.
+        """
+        Prompt the researcher for what to do next.
+        """
         print(
             "Enter one of the following:\n"
             " - the name of the next part to run\n"

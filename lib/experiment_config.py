@@ -5,11 +5,15 @@ from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartConfig, PartTypeInfo
 from lib.utils.import_module import import_module_from_path
 
-# The configuration class for the workflow manager,
-# initialized from an experiment's config TOML file.
 class ExperimentConfig:
-    # Initialize the experiment config from a TOML file
+    """
+    The configuration class for the workflow manager,
+    initialized from an experiment's config TOML file.
+    """
     def __init__(self, file_path: str):
+        """
+        Initialize the experiment config from a TOML file.
+        """
         self.file_path = os.path.normpath(file_path)
         self._load_config()
         self._parse_config()
@@ -58,8 +62,9 @@ class ExperimentConfig:
             raise ConfigError("No parts found in config")
 
     def _load_part_types(self):
-        # Dynamically load the part types from the specified
-        # Python file or from the default part type file
+        """
+        Load the part types from the specified Python file.
+        """
         script_dir_path = os.path.normpath(
             os.path.dirname(os.path.abspath(__file__))
         )
@@ -75,10 +80,9 @@ class ExperimentConfig:
         self.part_types: dict[str, PartTypeInfo] = module.part_types
 
     def _validate_config(self):
-        # Perform checks on various aspects of the
-        # experiment configuration, to prevent misconfigurations
-        # and tricky bugs during experiment execution due
-        # to simple mistakes in the config file.
+        """
+        Validate the experiment configuration.
+        """
         print("Validating experiment configuration...")
         for part_full_name, part_config in self.part_configs.items():
             if part_config.type_name not in self.part_types:

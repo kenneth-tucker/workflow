@@ -11,8 +11,10 @@ TRACE_FILE_VERSION = 1
 
 # Types of trace entries
 
-# Base class for all trace entries
 class TraceEntry:
+    """
+    Base class for all trace entries.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -21,8 +23,10 @@ class TraceEntry:
         self.timestamp = timestamp
         self.event = event
 
-# Trace entry for the start of an experiment run
 class ExperimentBeginEntry(TraceEntry):
+    """
+    Trace entry for the start of an experiment run.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -33,8 +37,10 @@ class ExperimentBeginEntry(TraceEntry):
         self.experiment_name = experiment_name
         self.run_number = run_number
 
-# Trace entry for the end of an experiment run
 class ExperimentEndEntry(TraceEntry):
+    """
+    Trace entry for the end of an experiment run.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -45,8 +51,10 @@ class ExperimentEndEntry(TraceEntry):
         self.experiment_name = experiment_name
         self.run_number = run_number
 
-# Trace entry for going to a new part
 class AtPartEntry(TraceEntry):
+    """
+    Trace entry for going to a new part.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -55,8 +63,10 @@ class AtPartEntry(TraceEntry):
         super().__init__(timestamp, "at_part")
         self.part_name = part_name
 
-# Trace entry for error encountered while running a part
 class ErrorEntry(TraceEntry):
+    """
+    Trace entry for error encountered while running a part.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -67,8 +77,10 @@ class ErrorEntry(TraceEntry):
         self.part_name = part_name
         self.error_message = error_message
 
-# Trace entry for a researcher's decision on what to do next
 class ResearcherDecisionEntry(TraceEntry):
+    """
+    Trace entry for a researcher's decision on what to do next.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -77,8 +89,10 @@ class ResearcherDecisionEntry(TraceEntry):
         super().__init__(timestamp, "researcher_decision")
         self.next_part = next_part
 
-# Trace entry for completing a step part in the experiment
 class StepEntry(TraceEntry):
+    """
+    Trace entry for completing a step part in the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -91,9 +105,10 @@ class StepEntry(TraceEntry):
         self.data_before = data_before
         self.data_after = data_after
 
-# Trace entry for a decision part's (usually automated)
-# decision on what to do next
 class DecisionEntry(TraceEntry):
+    """
+    Trace entry for completing a decision part in the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -104,8 +119,10 @@ class DecisionEntry(TraceEntry):
         self.decision_name = decision_name
         self.next_part = next_part
 
-# Trace beginning a flow
 class FlowBeginEntry(TraceEntry):
+    """
+    Trace entry for beginning a flow in the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -116,8 +133,10 @@ class FlowBeginEntry(TraceEntry):
         self.flow_name = flow_name
         self.first_part = first_part
 
-# Trace end of flow
 class FlowEndEntry(TraceEntry):
+    """
+    Trace entry for ending a flow in the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -126,8 +145,10 @@ class FlowEndEntry(TraceEntry):
         super().__init__(timestamp, "flow_end")
         self.flow_name = flow_name
 
-# Trace adding a part to the experiment
 class PartAddEntry(TraceEntry):
+    """
+    Trace entry for adding a part to the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -143,8 +164,10 @@ class PartAddEntry(TraceEntry):
         self.part_type_name = part_type_name
         self.part_category = part_category
 
-# Trace removing a part from the experiment
 class PartRemoveEntry(TraceEntry):
+    """
+    Trace entry for removing a part from the experiment.
+    """
     def __init__(
         self,
         timestamp: datetime,
@@ -153,16 +176,20 @@ class PartRemoveEntry(TraceEntry):
         super().__init__(timestamp, "part_remove")
         self.part_full_name = part_full_name
 
-# The class for tracing the execution of an experiment.
-# It reads and writes JSON files.
 class ExperimentTrace:
-    # Starts with data from the input file, if provided.
-    # Outputs data to the output file, if provided.
+    """
+    Class for tracing the execution of an experiment.
+    It reads and writes JSON files.
+    """
     def __init__(
         self,
         input_file_path: Optional[str] = None,
         output_file_path: Optional[str] = None,
     ):
+        """
+        Initialize the trace, loading from input file if provided,
+        and preparing to write to output file if provided.
+        """
         self.input_file_path = os.path.normpath(input_file_path) if input_file_path else None
         self.output_file_path = os.path.normpath(output_file_path) if output_file_path else None
         if self.input_file_path:
@@ -178,8 +205,10 @@ class ExperimentTrace:
             self._open_output_trace()
             self._initialize_output_trace()
 
-    # Records a new trace entry, streaming it to the output file if provided.
     def record(self, entry: TraceEntry):
+        """
+        Record a new trace entry, streaming it to the output file if provided.
+        """
         self.trace.append(entry)
         if self.output_trace_file:
             if len(self.trace) > 1:
@@ -191,8 +220,10 @@ class ExperimentTrace:
             json.dump(entry_dict, self.output_trace_file)
             self.output_trace_file.flush()
 
-    # Get the full list of part names in the path taken through the experiment
     def get_part_path(self) -> list[str]:
+        """
+        Get the full list of part names in the path taken through the experiment.
+        """
         part_path = []
         for entry in self.trace:
             if isinstance(entry, AtPartEntry):

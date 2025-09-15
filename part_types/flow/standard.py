@@ -1,8 +1,11 @@
 from typing import override
 from lib.experiment_parts import Flow
 
-# Start a flow in standard mode, using the start_here config value
 class StandardFlow(Flow):
+    """
+    A flow part that starts in standard mode, using the configured
+    start_here part name as the first part to run.
+    """
     def __init__(self, context):
         super().__init__(context)
 

@@ -3,52 +3,61 @@ from lib.utils.part_utils import PartConfig, PartTypeInfo
 from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartContext
 
-# Contains the common functionality for all parts.
-# Inherit from Step, Decision, or Flow below instead of this but
-# you can call these methods using self (e.g. self.get_input()).
 class _Part:
+    """
+    The base class for all parts (Steps, Decisions, and Flows).
+    Do NOT inherit from this class directly, instead inherit from Step, Decision, or Flow.
+    """
     def __init__(self, context: PartContext):
-        # Do not access _context in your class, use helper methods
-        # in this class instead.
+        # Do not access _context in your class, use the helper methods in this
+        # class instead.
         self._context = context
 
-    # Get the config file path that defined this part.
     def get_config_file_path(self) -> str:
+        """
+        Get the config file path that defined this part.
+        """
         return self._context.config.file_path
 
-    # Get the full part name assigned to this part instance.
     def get_full_name(self) -> str:
+        """
+        Get the full part name assigned to this part instance.
+        """
         return self._context.config.full_name
 
-    # Read a configuration value, optionally checking if its type
-    # is in the 'allow' list of types. Raises a ConfigError if
-    # the config is not found or if the type does not match to alert
-    # the researcher that they made a mistake in the config file. You
-    # can make any config value optional with the 'optional' flag, in
-    # which case the returned value is None if the config isn't found.
-    #
-    # Important Note: you can (and should) call get_config() from
-    # your class constructor BUT make sure to do so after calling
-    # the superclass constructor, super().__init__(context), otherwise
-    # it will not work as expected.
-    #
-    # Example (required config, no type checking):
-    # value = self.get_config('my_config')
-    #
-    # Example (required config with type checking):
-    # value = self.get_config('my_int_or_list_config', allow=[int, list])
-    #
-    # Example (optional config, no type checking):
-    # value = self.get_config('my_optional_config', optional=True)
-    #
-    # Example (optional config with type checking):
-    # value = self.get_config('my_optional_str_config', allow=[str], optional=True)
     def get_config(
         self,
         config_name: str,
         allow: list[type] | None = None,
         optional: bool = False
     ) -> object:
+        """
+        Read a configuration value, optionally checking if its type
+        is in the 'allow' list of types.
+        
+        Raises a ConfigError if the config is not found or if the type
+        does not match to alert the researcher that they made a mistake
+        in the config file. You can make any config value optional with
+        the 'optional' flag, in which case the returned value is None
+        if the config isn't found.
+
+        Important Note: you can (and should) call get_config() from
+        your class constructor BUT make sure to do so after calling
+        the superclass constructor, super().__init__(context), otherwise
+        it will not work as expected.
+
+        Example (required config, no type checking):
+        value = self.get_config('my_config')
+
+        Example (required config with type checking):
+        value = self.get_config('my_int_or_list_config', allow=[int, list])
+
+        Example (optional config, no type checking):
+        value = self.get_config('my_optional_config', optional=True)
+
+        Example (optional config with type checking):
+        value = self.get_config('my_optional_str_config', allow=[str], optional=True)
+        """
         if config_name not in self._context.config.config_values:
             if optional:
                 return None
@@ -67,31 +76,6 @@ class _Part:
             )
         return value
 
-    # Read an input argument, optionally checking if its type
-    # is in the 'allow' list of types. Raises a ConfigError if
-    # the argument is not assigned or a ValueError if the type does not match.
-    # You can make the argument optional with the 'optional' flag, in
-    # which case the returned value is None. The 'can_use_global'
-    # flag determines if a global variable with the given name
-    # should be used in case the input name mapping is missing.
-    # This option is convenient but can lead to unexpected behavior
-    # and brittle experiments if not used carefully. If the global
-    # name is also not found, None is returned.
-    #
-    # Example (required input, no type checking):
-    # value = self.get_input('my_arg')
-    #
-    # Example (required input with type checking):
-    # value = self.get_input('my_int_or_list_arg', allow=[int, list])
-    #
-    # Example (optional input, no type checking):
-    # value = self.get_input('my_optional_arg', optional=True)
-    #
-    # Example (optional input with type checking):
-    # value = self.get_input('my_optional_int_arg', allow=[int], optional=True)
-    #
-    # Example (input with global name fallback if no name mapping exists):
-    # value = self.get_input('my_int_arg_or_global', allow=[int], can_use_global=True)
     def get_input(
         self,
         argument_name: str,
@@ -99,6 +83,35 @@ class _Part:
         optional: bool = False,
         can_use_global: bool = False
     ) -> object:
+        """
+        Read an input argument, optionally checking if its type
+        is in the 'allow' list of types.
+        
+        Raises a ConfigError if the argument is not assigned or a
+        ValueError if the type does not match. You can make the
+        argument optional with the 'optional' flag, in which case
+        the returned value is None. The 'can_use_global' flag
+        determines if a global variable with the given name
+        should be used in case the input name mapping is missing.
+        This option is convenient but can lead to unexpected behavior
+        and brittle experiments if not used carefully. If the global
+        name is also not found, None is returned.
+        
+        Example (required input, no type checking):
+        value = self.get_input('my_arg')
+        
+        Example (required input with type checking):
+        value = self.get_input('my_int_or_list_arg', allow=[int, list])
+        
+        Example (optional input, no type checking):
+        value = self.get_input('my_optional_arg', optional=True)
+        
+        Example (optional input with type checking):
+        value = self.get_input('my_optional_int_arg', allow=[int], optional=True)
+        
+        Example (input with global name fallback if no name mapping exists):
+        value = self.get_input('my_int_arg_or_global', allow=[int], can_use_global=True)
+        """
         global_name = self._context.config.input_names.get(argument_name)
         if global_name is None:
             if can_use_global:
@@ -124,7 +137,9 @@ class _Part:
         return value
     
     def copy_experiment_data(self) -> dict:
-        # Get a copy of the entire experiment data dictionary
+        """
+        Get a copy of the entire experiment data dictionary.
+        """
         return self._context.manager._copy_experiment_data()
 
 # Base classes for Steps, Decisions, and Flows.
@@ -142,44 +157,26 @@ class _Part:
 #     def run_step(self) -> None:
 #         ...
 
-# A step to run in the experiment. Can modify the experiment data.
 class Step(_Part):
+    """
+    A step to run in the experiment. Can modify the experiment data.
+    """
     def __init__(self, context: PartContext):
         super().__init__(context)
 
-    # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this to run your step's procedure.
-    # It might be run multiple times during the experiment so
-    # be sure to reset any state between calls.
     def run_step(self) -> None:
+        """
+        Run the step's procedure.
+
+        You MUST implement this in your subclass. ExperimentManager
+        calls this to run your step's procedure. It might be run
+        multiple times during the experiment so be sure to reset
+        any state between calls.
+        """
         raise NotImplementedError("Must implement the run_step method in your subclass")
 
     # Helper functions you can call in your step
 
-    # Write an output argument with the given value. Raises a
-    # ConfigError if the argument is not assigned. You can make
-    # the argument optional with the 'optional' flag, in which
-    # case no experiment data is actually changed. This is useful
-    # if you want to output anything 'extra', that the researcher
-    # might or might not care about, such as more verbose data. The
-    # 'can_use_global' flag determines if a global variable with the
-    # given name should be used in case the output name mapping is
-    # missing. This option is convenient but can lead to unexpected
-    # behavior and brittle experiments if not used carefully.
-    #
-    # IMPORTANT NOTE: Only Step types should modify the experiment data.
-    #
-    # Example:
-    # x = 42
-    # ...
-    # self.set_output('my_arg', x)
-    #
-    # Example (output with global name fallback if no name mapping exists):
-    # self.set_output(
-    #     'my_tricky_arg_or_global',
-    #     'possibly corrupted something else',
-    #     can_use_global=True
-    # )
     def set_output(
         self,
         argument_name: str,
@@ -187,6 +184,33 @@ class Step(_Part):
         optional: bool = False,
         can_use_global: bool = False
     ) -> None:
+        """
+        Write an output argument with the given value.
+        
+        Raises a ConfigError if the argument is not assigned. You can make
+        the argument optional with the 'optional' flag, in which
+        case no experiment data is actually changed. This is useful
+        if you want to output anything 'extra', that the researcher
+        might or might not care about, such as more verbose data. The
+        'can_use_global' flag determines if a global variable with the
+        given name should be used in case the output name mapping is
+        missing. This option is convenient but can lead to unexpected
+        behavior and brittle experiments if not used carefully.
+
+        IMPORTANT NOTE: Only Step types should modify the experiment data.
+
+        Example:
+        x = 42
+        ...
+        self.set_output('my_arg', x)
+
+        Example (output with global name fallback if no name mapping exists):
+        self.set_output(
+            'my_tricky_arg_or_global',
+            'possibly corrupted something else',
+            can_use_global=True
+        )
+        """
         global_name = self._context.config.output_names.get(argument_name)
         if global_name is None:
             if can_use_global:
@@ -203,43 +227,56 @@ class Step(_Part):
                     )
         self._context.manager._set_data(global_name, value)
 
-# A decision point in the experiment. A Decision subclass
-# should NOT modify anything, it should just decide what
-# part of the experiment we want to do next.
 class Decision(_Part):
+    """
+    A decision point in the experiment. Should NOT modify the experiment data.
+    """
     def __init__(self, context: PartContext):
         super().__init__(context)
 
-    # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this to decide which route to take.
-    # You need to return the selected route name (not the part name),
-    # "done" to leave the current flow (ends the experiment if
-    # it is in the outermost flow), "quit" to end the entire experiment,
-    # or None if you could not decide and need the researcher to
-    # manually decide what's next.
     def decide_route(self) -> str | None:
+        """
+        Decide which route to take next in the experiment.
+
+        You MUST implement this in your subclass. ExperimentManager
+        calls this to decide which route to take. You need to return
+        the selected route name (not the part name), "done" to leave
+        the current flow (ends the experiment if it is in the outermost flow),
+        "quit" to end the entire experiment, or None if you could not decide
+        and need the researcher to manually decide what's next.
+        """
         raise NotImplementedError("Must implement the decide_route method in your subclass")
 
-# A flow sets up and contains related parts. A Flow subclass
-# should NOT modify anything other than the parts it contains.
 class Flow(_Part):
+    """
+    A flow to setup and contain related parts. Should NOT modify the experiment
+    data except through its parts.
+    """
     def __init__(self, context: PartContext):
         super().__init__(context)
 
-    # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this when it enters your flow.
-    # You need to setup your flow's parts then return the (short)
-    # name of the first part of your flow for the ExperimentManager
-    # to run, or "done" to leave the flow right away or "quit"
-    # to end the entire experiment or None to have the researcher
-    # decide what to do first in the flow.
     def begin_flow(self) -> str | None:
+        """
+        Setup your flow's parts and return the (short) name of the
+        first part of your flow for the ExperimentManager to run.
+
+        You MUST implement this in your subclass. ExperimentManager
+        calls this when it enters your flow. You need to setup your flow's
+        parts and return the (short) name of the first part of your flow
+        for the ExperimentManager to run, or "done" to leave the flow
+        right away or "quit" to end the entire experiment or None to
+        have the researcher decide what to do first in the flow.
+        """
         raise NotImplementedError("Must implement the begin_flow method in your subclass")
 
-    # NOTE: YOU must implement this in your class definition.
-    # ExperimentManager calls this when it exits your flow.
-    # You need to perform any necessary cleanup here.
     def end_flow(self) -> None:
+        """
+        Cleanup your flow before exiting it.
+
+        You MUST implement this in your subclass. ExperimentManager
+        calls this when it exits your flow. You need to perform any
+        necessary cleanup here.
+        """
         raise NotImplementedError("Must implement the end_flow method in your subclass")
     
     # Helper functions you can call to manage your flow
@@ -250,26 +287,35 @@ class Flow(_Part):
     # only know about and be managing its own parts.
 
     def get_start_here(self) -> str | None:
-        # Get the short name of the part to start with
-        # when this flow is entered, or None if not configured.
+        """
+        Get the short name of the part to start with when this flow is entered,
+        or None if not configured.
+        """
         return self._context.config.start_here
 
     def list_part_names(self) -> list[str]:
-        # List the short names for all parts in the current flow.
-        # Note: does not include parts in nested flows.
+        """
+        List the short names for all parts in the current flow.
+        Note: does not include parts in nested flows.
+        """
         return self._context.manager._get_flow_parts_short_names(self.get_full_name())
 
     def get_part(self, part_short_name: str) -> _Part | None:
-        # Access a part object from the current flow, returns None
-        # if the part does not exist.
+        """
+        Access a part object from the current flow, returns None
+        if the part does not exist.
+        """
         return self._context.manager._get_part(f"{self.get_full_name()}.{part_short_name}")
 
     def add_part(self, part_config: PartConfig) -> None:
-        # Construct a new part with the given config data then add
-        # it into the current flow. If a part already exists in the flow
-        # with the same name then that part is replaced with the new one.
-        # Raises a ConfigError if the config is found to be invalid.
-        # Check the part_config.full_name to ensure it is in this flow.
+        """
+        Construct a new part with the given config data then add
+        it into the current flow. If a part already exists in the flow
+        with the same name then that part is replaced with the new one.
+
+        Raises a ConfigError if the config is found to be invalid.
+        Check the part_config.full_name to ensure it is in this flow.
+        """
         if not part_config.full_name.startswith(f"{self.get_full_name()}."):
             raise ConfigError(
                 f"Cannot add part '{part_config.full_name}' to flow '{self.get_full_name()}', "
@@ -278,5 +324,7 @@ class Flow(_Part):
         self._context.manager._add_part(part_config)
 
     def remove_part(self, part_short_name: str) -> None:
-        # Remove a part from the current flow, does nothing if the part does not exist.
+        """
+        Remove a part from the current flow, does nothing if the part does not exist.
+        """
         self._context.manager._remove_part(f"{self.get_full_name()}.{part_short_name}")

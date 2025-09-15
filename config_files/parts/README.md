@@ -1,6 +1,6 @@
 # Parts Library
 A collection of parts that can be loaded into experiments
-to help you with common tasks.
+as flows to help you with common tasks.
 
 ## How to Load
 In your experiment config file include a table like this

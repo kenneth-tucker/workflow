@@ -1,8 +1,11 @@
 from typing import override
 from lib.experiment_parts import Flow
 
-# Start a flow in manual mode
 class ManualFlow(Flow):
+    """
+    A flow part that starts in manual mode, where the researcher
+    specifies the first part to run.
+    """
     def __init__(self, context):
         super().__init__(context)
 
