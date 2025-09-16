@@ -309,7 +309,8 @@ class ExperimentManager:
                 PartAddEntry(
                     datetime.now(),
                     part_config.full_name,
-                    part_config.type_name,
+                    part_config.file_path,
+                    part_config.raw,
                     "step" if issubclass(part_type.type, Step) else
                     "decision" if issubclass(part_type.type, Decision) else
                     "flow" if issubclass(part_type.type, Flow) else

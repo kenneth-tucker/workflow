@@ -152,16 +152,18 @@ class PartAddEntry(TraceEntry):
     def __init__(
         self,
         timestamp: datetime,
-        part_full_name: str,
-        part_type_name: str,
+        full_name: str,
+        file_path: str,
+        raw_config: dict,
         part_category: str,
     ):
         allowed_categories = {"step", "decision", "flow"}
         if part_category not in allowed_categories:
             raise ValueError(f"part_category must be one of {allowed_categories}, got '{part_category}'")
         super().__init__(timestamp, "part_add")
-        self.part_full_name = part_full_name
-        self.part_type_name = part_type_name
+        self.full_name = full_name
+        self.file_path = file_path
+        self.raw_config = raw_config
         self.part_category = part_category
 
 class PartRemoveEntry(TraceEntry):
@@ -171,10 +173,10 @@ class PartRemoveEntry(TraceEntry):
     def __init__(
         self,
         timestamp: datetime,
-        part_full_name: str,
+        full_name: str,
     ):
         super().__init__(timestamp, "part_remove")
-        self.part_full_name = part_full_name
+        self.full_name = full_name
 
 class ExperimentTrace:
     """
@@ -303,14 +305,15 @@ class ExperimentTrace:
                 case "part_add":
                     self.parsed_input.append(PartAddEntry(
                         timestamp=timestamp,
-                        part_full_name=entry["part_full_name"],
-                        part_type_name=entry["part_type_name"],
+                        full_name=entry["full_name"],
+                        file_path=entry["file_path"],
+                        raw_config=entry["raw_config"],
                         part_category=entry["part_category"]
                     ))
                 case "part_remove":
                     self.parsed_input.append(PartRemoveEntry(
                         timestamp=timestamp,
-                        part_full_name=entry["part_full_name"]
+                        full_name=entry["full_name"]
                     ))
                 case _:
                     raise ValueError(f"Unknown trace entry type: {entry.get('event')}")
