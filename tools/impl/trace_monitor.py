@@ -30,34 +30,34 @@ class TraceMonitor:
         self.trace_entries = []
         with open(self.trace_file_path, "r") as f:
             footer_reached = False
+            buffer = ""
             while not footer_reached:
-                line = f.readline()
-                if not line:
+                # Read in new data
+                raw = f.readline()
+                if not raw:
                     time.sleep(0.1)
                     continue
-                line_index = f.tell()
-                stripped_line = line.rstrip(", \n\r\t")
-                if line.startswith('{"version":'):
-                    # JSON header (e.g. '{"version": 1, "trace": [')
-                    version_str = line.split('"version":', 1)[1].split(",", 1)[0].strip()
-                    version = int(version_str)
-                    if not version:
-                        raise ValueError(f"Missing version number in trace file header")
-                    if version > SUPPORTED_TRACE_FILE_VERSION:
-                        raise ValueError(f"Trace file version {version} is not supported (max supported is {SUPPORTED_TRACE_FILE_VERSION})")
-                elif stripped_line == "":
-                    # Skip separators
-                    pass
-                else:
-                    # JSON entry line (e.g. '{"timestamp": "...", "event": "...", ...},')
-                    # Note: may include the closing ']}'
-                    if line.endswith("]}"):
-                        footer_reached = True
-                        stripped_line = stripped_line[:-2]  # Remove the ']}'
-                    try:
+                buffer += raw
+                # Try to process complete lines in the buffer
+                while "\n" in buffer:
+                    current_line, buffer = buffer.split("\n", 1)
+                    if current_line.startswith('{"version":'):
+                        # JSON header (e.g. '{"version": 1, "trace": [')
+                        version_str = current_line.split('"version":', 1)[1].split(",", 1)[0].strip()
+                        version = int(version_str)
+                        if not version:
+                            raise ValueError(f"Missing version number in trace file header")
+                        if version > SUPPORTED_TRACE_FILE_VERSION:
+                            raise ValueError(f"Trace file version {version} is not supported (max supported is {SUPPORTED_TRACE_FILE_VERSION})")
+                    else:
+                        # JSON entry line (e.g. '{"timestamp": "...", "event": "...", ...},')
+                        # Note: may include the closing ']}'
+                        if current_line.endswith("]}"):
+                            footer_reached = True
+                            stripped_line = current_line[:-2]
+                        else:
+                            stripped_line = current_line.rstrip(",")
                         entry = json.loads(stripped_line)
-                    except json.JSONDecodeError as e:
-                        raise ValueError(f"Error parsing JSON in trace file: {e}")
-                    self.trace_entries.append(entry)
-                    for observer in self.observers.values():
-                        observer.on_trace_entry(entry)
+                        self.trace_entries.append(entry)
+                        for observer in self.observers.values():
+                            observer.on_trace_entry(entry)

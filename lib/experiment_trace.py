@@ -342,7 +342,7 @@ class ExperimentTrace:
 
     def _finalize_output_trace(self):
         if self.output_trace_file:
-            self.output_trace_file.write(']}')
+            self.output_trace_file.write(']}\n')
             self.output_trace_file.flush()
 
     def __enter__(self):
