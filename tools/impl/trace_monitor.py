@@ -58,6 +58,7 @@ class TraceMonitor:
                         else:
                             stripped_line = current_line.rstrip(",")
                         entry = json.loads(stripped_line)
-                        self.trace_entries.append(entry)
-                        for observer in self.observers.values():
-                            observer.on_trace_entry(entry)
+                        if len(entry) > 0:
+                            self.trace_entries.append(entry)
+                            for observer in self.observers.values():
+                                observer.on_trace_entry(entry)

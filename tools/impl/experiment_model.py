@@ -46,9 +46,6 @@ class ExperimentModel:
         self.error_stack: list[str] = []
     
     def on_trace_entry(self, trace_entry: dict):
-        if len(trace_entry) == 0:
-            # Skip empty trace entries
-            return
         # Update the experiment model based on the trace entry
         timestamp = datetime.fromisoformat(trace_entry["timestamp"])
         match trace_entry.get("event"):
