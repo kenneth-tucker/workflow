@@ -6,12 +6,9 @@ from datetime import datetime
 import os
 import threading
 from flask import Flask, render_template, jsonify, url_for
-from impl.flowchart import FlowChart
-from impl.snapshot import Snapshot
-from impl.snapshot_generator import SnapshotConsumer
-
-SERVER_NAME = "127.0.0.1"
-PORT_NUMBER = 50000
+from tools.impl.flowchart import FlowChart
+from tools.impl.snapshot import Snapshot
+from tools.impl.snapshot_generator import SnapshotConsumer
 
 class WebData(SnapshotConsumer):
     """

@@ -5,23 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Workflow Experiment",
+            "name": "Python: Workflow Experiment",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/workflow.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/config_files/examples/demo/demo_config.toml"
-            ]
-        },
-        {
-            "name": "Python Debugger: View Experiment",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/tools/view_experiment.py",
-            "console": "integratedTerminal",
-            "args": [
-                "C:\\Users\\ktuck\\Code\\workflow\\my_results\\examples\\my_demo_experiment\\run_1"
+                "${workspaceFolder}/config_files/examples/demo/demo_config.toml",
+                "--view"
             ]
         }
     ]

@@ -1,5 +1,5 @@
 import graphviz
-from impl.experiment_model import ExperimentModel
+from tools.impl.experiment_model import ExperimentModel
 
 class FlowChart:
     """

@@ -17,20 +17,26 @@
 
 import argparse
 import os
+import sys
 from time import sleep
 import webbrowser
-from impl.trace_monitor import TraceMonitor
-from impl.trace_printer import TracePrinter
-from impl.snapshot_generator import SnapshotGenerator
-from impl.web_server import PORT_NUMBER, SERVER_NAME, web_data, app
 import threading
 
-def main():
-    # Get the arguments
-    parser = argparse.ArgumentParser(description="Show an ongoing experiment in a web browser")
-    parser.add_argument("run_dir", type=str, help="Path to the run directory (required)")
-    args = parser.parse_args()
-    run_dir = os.path.normpath(args.run_dir)
+# Allow running this script directly from any directory without installing the package
+if __package__ is None or __package__ == "":
+    import pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
+from tools.impl.trace_monitor import TraceMonitor
+from tools.impl.trace_printer import TracePrinter
+from tools.impl.snapshot_generator import SnapshotGenerator
+from tools.impl.web_server import web_data, app
+
+DEFAULT_SERVER_NAME = "127.0.0.1"
+DEFAULT_PORT_NUMBER = 50000
+
+def view_experiment(run_dir: str):
+    run_dir = os.path.normpath(run_dir)
     trace_file_path = os.path.join(run_dir, "trace.json")
     # Whenever there is a new trace, print it to the console for debugging
     trace_printer = TracePrinter()
@@ -47,17 +53,18 @@ def main():
     server_thread = threading.Thread(
         target=app.run,
         kwargs={
-            "host": SERVER_NAME,
-            "port": PORT_NUMBER,
+            "host": DEFAULT_SERVER_NAME,
+            "port": DEFAULT_PORT_NUMBER,
             "debug": True,
             "use_reloader": False
         },
         daemon=True
     )
     server_thread.start()
-    sleep(1)  # Give the server a moment to start
+    # Give the server a moment to start up
+    sleep(1)
     # Open the web page in the default browser
-    webbrowser.open(f"http://{SERVER_NAME}:{PORT_NUMBER}")
+    webbrowser.open(f"http://{DEFAULT_SERVER_NAME}:{DEFAULT_PORT_NUMBER}")
     # Update the web view whenever there is a new snapshot
     # React to changes in the trace file
     trace_monitor = TraceMonitor(trace_file_path)
@@ -66,6 +73,15 @@ def main():
     trace_monitor.add_observer("snapshot_generator", snapshot_generator)
     # Returns when the end of the trace file is reached
     trace_monitor.monitor()
+    # Show the web page for a bit longer, in case the user
+    # did not get a chance to see the final state
+    sleep(5)
+
+def main():
+    parser = argparse.ArgumentParser(description="Show an ongoing experiment in a web browser")
+    parser.add_argument("run_dir", type=str, help="Path to the run directory (required)")
+    args = parser.parse_args()
+    view_experiment(args.run_dir)
 
 if __name__ == "__main__":
     main()

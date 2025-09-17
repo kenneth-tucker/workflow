@@ -1,7 +1,7 @@
 
 from datetime import datetime
-from impl.experiment_model import ExperimentModel
-from impl.flowchart import FlowChart
+from tools.impl.experiment_model import ExperimentModel
+from tools.impl.flowchart import FlowChart
 
 # Contains all of the content for a snapshot of the experiment at a given time
 class Snapshot:

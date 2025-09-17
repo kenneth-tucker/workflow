@@ -40,9 +40,12 @@ class ExperimentManager:
     """
     def __init__(
         self,
-        config: ExperimentConfig
+        config: ExperimentConfig,
+        on_output_dir_built: Optional[callable] = None
     ):
         self.config = config
+        # A callback function that is called after the output directory is built
+        self.on_output_dir_built = on_output_dir_built
 
     def run(
         self,
@@ -375,6 +378,9 @@ class ExperimentManager:
         self.experiment_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
         print(f"Creating experiment trace file: {self.experiment_trace_file_path}")
         self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
+        # Call the callback function, if provided
+        if self.on_output_dir_built is not None:
+            self.on_output_dir_built(self.out_dir_for_run)
 
     def _convert_to_full_name(self, short_name: str | None) -> str | None:
         """
