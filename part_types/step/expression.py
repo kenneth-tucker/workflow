@@ -1,7 +1,7 @@
 
 from lib.experiment_parts import Step
 from lib.utils.exceptions import ConfigError
-from lib.utils.parse_config import execute_statement_with_data_values
+from lib.utils.parse_config import execute_statement_with_data_values, extract_data_names
 
 class ExpressionStep(Step):
     """
@@ -34,9 +34,11 @@ class ExpressionStep(Step):
             expression = parts[1].strip()
             try:
                 # Evaluate the expression using the experiment data as variables
+                data_names = extract_data_names(expression)
+                data_values = {name: self.get_input(name, can_use_global=True) for name in data_names}
                 result = execute_statement_with_data_values(
                     expression,
-                    self.copy_experiment_data()
+                    data_values
                 )
                 # Store the result in the experiment data
                 self.set_output(data_name, result, can_use_global=True)

@@ -81,7 +81,7 @@ class ExperimentManager:
                 # If we are (still) retracing an old run, check we are on the same path
                 if path_index < len(old_part_path) and \
                     old_part_path[path_index] != current_part_full_name:
-                    raise ValueError(
+                    raise RuntimeError(
                         f"Path deviation at index {path_index} while retracing old run: "
                         f"expected '{old_part_path[path_index]}', got '{current_part_full_name}'"
                     )
@@ -101,7 +101,7 @@ class ExperimentManager:
                     current_part_full_name not in self.experiment_parts:
                     if path_index < len(old_part_path):
                         # If retracing, use the past researcher's decision from the old run
-                        next_part_short_name = old_part_path[path_index + 1]
+                        next_part_short_name = self._convert_to_short_name(old_part_path[path_index + 1])
                     else:
                         # Ask the current researcher what to do next
                         next_part_short_name = self._get_researcher_decision(current_part_full_name)
@@ -373,6 +373,14 @@ class ExperimentManager:
         self.experiment_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
         print(f"Creating experiment trace file: {self.experiment_trace_file_path}")
         self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
+
+    def _convert_to_short_name(self, full_name: str | None) -> str | None:
+        """
+        Extract the short part name from a full part name.
+        """
+        if full_name is None or full_name in COMMAND_NAMES:
+            return full_name
+        return full_name.split(".")[-1]
 
     def _convert_to_full_name(self, short_name: str | None) -> str | None:
         """
