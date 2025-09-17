@@ -139,7 +139,8 @@ class ExperimentManager:
             ExperimentBeginEntry(
                 datetime.now(),
                 self.config.experiment_name,
-                self.run_number
+                self.run_number,
+                self.experiment_data
             )
         )
 

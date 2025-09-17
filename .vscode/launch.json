@@ -21,7 +21,7 @@
             "program": "${workspaceFolder}/tools/view_experiment.py",
             "console": "integratedTerminal",
             "args": [
-                "C:\\Users\\ktuck\\Code\\workflow\\my_results\\examples\\my_demo_experiment\\run_5"
+                "C:\\Users\\ktuck\\Code\\workflow\\my_results\\examples\\my_demo_experiment\\run_1"
             ]
         }
     ]

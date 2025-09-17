@@ -9,7 +9,7 @@ class TraceObserver:
     Base class for objects that want to observe trace file entries.
     """
     def on_trace_entry(self, trace_entry: dict):
-        raise NotImplementedError("on_trace_entry() must be implemented in subclasses")
+        raise NotImplementedError("Must be implemented by subclass")
 
 class TraceMonitor:
     """
@@ -51,8 +51,8 @@ class TraceMonitor:
                             raise ValueError(f"Trace file version {version} is not supported (max supported is {SUPPORTED_TRACE_FILE_VERSION})")
                     else:
                         # JSON entry line (e.g. '{"timestamp": "...", "event": "...", ...},')
-                        # Note: may include the closing ']}'
-                        if current_line.endswith("]}"):
+                        # Note: may include the closing '{}]}'
+                        if current_line.endswith("{}]}"):
                             footer_reached = True
                             stripped_line = current_line[:-2]
                         else:

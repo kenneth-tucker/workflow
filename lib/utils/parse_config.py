@@ -1,6 +1,7 @@
 import importlib.util
 import re
 import sys
+from collections import OrderedDict
 from lib.utils.part_utils import PartConfig
 
 def extract_data_names(text: str) -> list[str]:
@@ -41,12 +42,12 @@ def extract_part_configs(
        file_path: str,
        part_table: dict,
        parent_full_name: str
-    ) -> dict[str, PartConfig]:
+    ) -> 'OrderedDict[str, PartConfig]':
     """
     Extract all part configurations from a part table.
-    Returns a dictionary mapping part full names to their configurations.
+    Returns an OrderedDict mapping part full names to their configurations.
     """
-    parts = {}
+    parts = OrderedDict()
     for top_level_name, top_level_part in part_table.items():
         if top_level_name == "start_here":
             continue
@@ -67,7 +68,7 @@ def _extract_part_configs_recursive(
     file_path: str,
     raw_table: dict,
     name_path: str
-) -> dict[str, PartConfig]:
+) -> 'OrderedDict[str, PartConfig]':
     """
     Recursive helper for extract_part_configs.
 
@@ -108,7 +109,7 @@ def _extract_part_configs_recursive(
         input_names=raw_table.get("input_names", {}),
         output_names=raw_table.get("output_names", {}),
     )
-    nested_parts = {}
+    nested_parts = OrderedDict()
     for sub_key, sub_value in raw_table.items():
         if sub_key not in reserved_keys:
             nested_parts.update(
@@ -119,4 +120,7 @@ def _extract_part_configs_recursive(
                 )
             )
 
-    return {**nested_parts, **{name_path: part}}
+    result = OrderedDict()
+    result[name_path] = part
+    result.update(nested_parts)
+    return result

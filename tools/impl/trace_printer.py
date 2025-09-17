@@ -1,7 +1,7 @@
 
 
-from impl.trace_monitor import TraceObserver
 import pprint
+from impl.trace_monitor import TraceObserver
 
 class TracePrinter(TraceObserver):
     """

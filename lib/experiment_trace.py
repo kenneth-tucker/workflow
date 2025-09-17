@@ -31,11 +31,13 @@ class ExperimentBeginEntry(TraceEntry):
         self,
         timestamp: datetime,
         experiment_name: str,
-        run_number: int
+        run_number: int,
+        experiment_data: dict[str, any]
     ):
         super().__init__(timestamp, "experiment_begin")
         self.experiment_name = experiment_name
         self.run_number = run_number
+        self.experiment_data = experiment_data
 
 class ExperimentEndEntry(TraceEntry):
     """
@@ -213,13 +215,11 @@ class ExperimentTrace:
         """
         self.trace.append(entry)
         if self.output_trace_file:
-            if len(self.trace) > 1:
-                # Add a comma before the next entry
-                self.output_trace_file.write(',\n')
             # Serialize the entry as a dict
             entry_dict = entry.__dict__.copy()
             entry_dict["timestamp"] = entry.timestamp.isoformat()
             json.dump(entry_dict, self.output_trace_file)
+            self.output_trace_file.write(',\n')
             self.output_trace_file.flush()
 
     def get_part_path(self) -> list[str]:
@@ -254,7 +254,8 @@ class ExperimentTrace:
                     self.parsed_input.append(ExperimentBeginEntry(
                         timestamp=timestamp,
                         experiment_name=entry["experiment_name"],
-                        run_number=entry["run_number"]
+                        run_number=entry["run_number"],
+                        experiment_data=entry["experiment_data"]
                     ))
                 case "experiment_end":
                     self.parsed_input.append(ExperimentEndEntry(
@@ -342,7 +343,7 @@ class ExperimentTrace:
 
     def _finalize_output_trace(self):
         if self.output_trace_file:
-            self.output_trace_file.write(']}\n')
+            self.output_trace_file.write('{}]}\n')
             self.output_trace_file.flush()
 
     def __enter__(self):
