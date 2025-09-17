@@ -248,6 +248,9 @@ class ExperimentTrace:
         # Deserialize the raw trace entries
         self.parsed_input = []
         for entry in raw_trace:
+            if not entry:
+                # Skip empty entries (e.g. the last one)
+                continue
             timestamp = datetime.fromisoformat(entry["timestamp"])
             match entry.get("event"):
                 case "experiment_begin":
