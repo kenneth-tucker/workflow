@@ -111,7 +111,7 @@
 <body>
     <div id="app">
         <div class="top-bar" id="topBar">
-            Experiment Name — Run #
+            experiment_name — run #run_number [state]
         </div>
         <div class="main-content">
             <div class="left-pane">
@@ -147,6 +147,11 @@
                 if (new_experiment.snapshots.length === experiment.snapshots.length) {
                     return; // No change
                 }
+                // If we were playing and reached the end, stay at the end
+                // Note: this ensures the UI is synced with the running experiment
+                if (playing && currentSlide === experiment.snapshots.length - 1) {
+                    currentSlide = new_experiment.snapshots.length - 1;
+                }
                 experiment = new_experiment;
                 // Ensure there's at least one snapshot
                 if (experiment.snapshots.length === 0) {
@@ -163,9 +168,9 @@
             }
         }
 
-        // Fetch initially and then every 5 seconds
+        // Fetch initially and then every half second
         fetchExperimentData();
-        setInterval(fetchExperimentData, 5000);
+        setInterval(fetchExperimentData, 500);
 
         // State
         let currentSlide = 0;
@@ -183,7 +188,29 @@
 
         // Render functions
         function renderTopBar() {
-            topBar.textContent = `${experiment.name} — Run #${experiment.run}`;
+            let content = '';
+            if (experiment.name && experiment.run) {
+                content += `${experiment.name} — run #${experiment.run} `;
+            }
+            if (experiment.state) {
+                content += `[${experiment.state}]`;
+                if(experiment.state.toLowerCase() === 'completed') {
+                    topBar.style.background = '#4caf50';
+                }
+                else if(experiment.state.toLowerCase() === 'running') {
+                    topBar.style.background = '#2196f3';
+                }
+                else if(experiment.state.toLowerCase() === 'not started') {
+                    topBar.style.background = '#2d3e50';
+                }
+                else {
+                    topBar.style.background = '#2d3e50';
+                }
+            }
+            if (!content) {
+                content = '[waiting for data]';
+            }
+            topBar.textContent = content;
         }
 
         function renderFlowchart() {

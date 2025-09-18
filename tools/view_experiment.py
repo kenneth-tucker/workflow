@@ -1,4 +1,4 @@
-# Show an ongoing experiment in a web browser
+# Show an ongoing or completed experiment in a web browser
 #
 # Example Command:
 # view_experiment.py <run_dir>
@@ -55,7 +55,7 @@ def view_experiment(run_dir: str):
         kwargs={
             "host": DEFAULT_SERVER_NAME,
             "port": DEFAULT_PORT_NUMBER,
-            "debug": True,
+            "debug": False,
             "use_reloader": False
         },
         daemon=True
@@ -73,9 +73,8 @@ def view_experiment(run_dir: str):
     trace_monitor.add_observer("snapshot_generator", snapshot_generator)
     # Returns when the end of the trace file is reached
     trace_monitor.monitor()
-    # Show the web page for a bit longer, in case the user
-    # did not get a chance to see the final state
-    sleep(5)
+    # Keep the server alive until the user is done
+    input("Press <ENTER> to exit...")
 
 def main():
     parser = argparse.ArgumentParser(description="Show an ongoing experiment in a web browser")

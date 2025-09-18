@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 class ExperimentState(Enum):
-    NOT_STARTED = "not_started"
+    NOT_STARTED = "not started"
     RUNNING = "running"
     COMPLETED = "completed"
 

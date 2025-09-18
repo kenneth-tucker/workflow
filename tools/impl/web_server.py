@@ -16,6 +16,7 @@ class WebData(SnapshotConsumer):
     """
     def __init__(self):
         self.experiment_json = {
+            "state": "",
             "name": "",
             "run": "",
             "snapshots": [],
@@ -55,11 +56,12 @@ class WebData(SnapshotConsumer):
             snapshot_json = {
                 "timestamp": snapshot.timestamp.isoformat(),
                 "event": snapshot.event,
-                "label": f"{snapshot_index}",
+                "label": f"{snapshot_index + 1}",
                 "flowchart": flowchart_url,
                 "data": snapshot.experiment_model.experiment_data
             }
             self.experiment_json["snapshots"].append(snapshot_json)
+            self.experiment_json["state"] = snapshot.experiment_model.experiment_state.value or ""
             if not self.experiment_json["name"]:
                 self.experiment_json["name"] = snapshot.experiment_model.experiment_name or ""
             if not self.experiment_json["run"]:

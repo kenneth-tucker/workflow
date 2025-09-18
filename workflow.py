@@ -71,6 +71,9 @@ def main():
     manager = ExperimentManager(config, on_output_dir_built=on_output_dir_built)
     # Run the experiment one time, returns on completion
     manager.run(mode, old_trace)
+    if args.view:
+        # Keep the server alive until the user is done
+        input("Press <ENTER> to exit...")
 
 if __name__ == "__main__":
     main()
