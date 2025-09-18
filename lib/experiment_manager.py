@@ -59,12 +59,6 @@ class ExperimentManager:
             if old_trace is None:
                 raise ValueError("old_trace must be provided when mode is RERUN or CONTINUE")
             old_part_path = old_trace.get_part_path()
-            if mode == ExperimentMode.CONTINUE:
-                # Replace quit with None so we can continue, or add None if the old run wasn't quit
-                if len(old_part_path) > 0 and old_part_path[-1].part_name == "quit":
-                    old_part_path[-1].part_name = None
-                else:
-                    old_part_path.append(PartPathPiece(None, None))
         else:
             old_part_path = []
         
@@ -85,7 +79,7 @@ class ExperimentManager:
                 if path_index < len(old_part_path) and \
                     old_part_path[path_index].part_name != current_part_full_name:
                     raise RuntimeError(
-                        f"Path deviation at index {path_index} while retracing old run: "
+                        f"Path deviation at path index {path_index} while retracing old run: "
                         f"expected '{old_part_path[path_index].part_name}', got '{current_part_full_name}'"
                     )
                 
@@ -114,12 +108,29 @@ class ExperimentManager:
                     else:
                         # Ask the current researcher what to do next
                         next_part_short_name = self._get_researcher_decision(current_part_full_name)
+                    self.new_trace.record(
+                        ResearcherDecisionEntry(
+                            datetime.now(),
+                            next_part_short_name
+                        )
+                    )
                 else:
                     next_part_short_name = self._run_part(current_part_full_name)
+
+                # If we are continuing an old run, replace "quit" with None
+                # and stop retracing the old path
+                if mode == ExperimentMode.CONTINUE and \
+                    path_index < len(old_part_path) and \
+                    next_part_short_name == "quit":
+                    print(f"Continuing from old run at path index {path_index} "
+                          f"(path length is {len(old_part_path)})")
+                    next_part_short_name = None
+                    old_part_path = old_part_path[:path_index]
 
                 # Move to the next part or command
                 path_index += 1
                 current_part_full_name = self._convert_to_full_name(next_part_short_name)
+
 
             # Tear down the experiment run
             self.new_trace.record(
@@ -282,12 +293,6 @@ class ExperimentManager:
         else:
             print(f"\nUnknown part: '{current_part_full_name}'\n")
         next_part_short_name = self._get_next_from_researcher()
-        self.new_trace.record(
-            ResearcherDecisionEntry(
-                datetime.now(),
-                next_part_short_name
-            )
-        )
         return next_part_short_name
 
     def _get_data(self, global_name: str) -> object | None:
