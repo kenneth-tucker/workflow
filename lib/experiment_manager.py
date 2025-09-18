@@ -8,10 +8,10 @@ from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartConfig, PartContext, PartTypeInfo
 from lib.experiment_config import ExperimentConfig
 from lib.experiment_parts import _Part, Step, Decision, Flow
-from lib.experiment_trace import AtPartEntry, ExperimentTrace, \
-    ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, PartAddEntry, PartRemoveEntry, \
-    ResearcherDecisionEntry, StepEntry, DecisionEntry, \
-    FlowBeginEntry, FlowEndEntry
+from lib.experiment_trace import ExperimentTrace, PartPathPiece, \
+    AtPartEntry, ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, \
+    PartAddEntry, PartRemoveEntry, ResearcherDecisionEntry, StepEntry, \
+    DecisionEntry, FlowBeginEntry, FlowEndEntry
 
 class ExperimentMode(enum.Enum):
     """
@@ -54,16 +54,17 @@ class ExperimentManager:
         """
 
         # Setup for retracing an old run's path, part by part, if needed
+        self.old_trace_part_data = None
         if mode in {ExperimentMode.RERUN, ExperimentMode.CONTINUE}:
             if old_trace is None:
                 raise ValueError("old_trace must be provided when mode is RERUN or CONTINUE")
             old_part_path = old_trace.get_part_path()
             if mode == ExperimentMode.CONTINUE:
-                # Replace quit with None so we can continue
-                if len(old_part_path) > 0 and old_part_path[-1] == "quit":
-                    old_part_path[-1] = None
+                # Replace quit with None so we can continue, or add None if the old run wasn't quit
+                if len(old_part_path) > 0 and old_part_path[-1].part_name == "quit":
+                    old_part_path[-1].part_name = None
                 else:
-                    old_part_path.append(None)
+                    old_part_path.append(PartPathPiece(None, None))
         else:
             old_part_path = []
         
@@ -71,23 +72,29 @@ class ExperimentManager:
         self._begin_experiment_run()
 
         # Ensure the new trace will be closed correctly
-        with self.experiment_trace:
+        with self.new_trace:
 
             # Run the experiment, part by part
             path_index = 0
             current_part_full_name = self.config.initial_part_name
             while current_part_full_name != "quit":
+                # Clear any part_data from the previous part
+                self.new_trace_part_data = None
 
                 # If we are (still) retracing an old run, check we are on the same path
                 if path_index < len(old_part_path) and \
-                    old_part_path[path_index] != current_part_full_name:
+                    old_part_path[path_index].part_name != current_part_full_name:
                     raise RuntimeError(
                         f"Path deviation at index {path_index} while retracing old run: "
-                        f"expected '{old_part_path[path_index]}', got '{current_part_full_name}'"
+                        f"expected '{old_part_path[path_index].part_name}', got '{current_part_full_name}'"
                     )
+                
+                # Get any part_data associated with this part in the old trace
+                self.old_trace_part_data = \
+                    old_part_path[path_index].part_data if path_index < len(old_part_path) else None
 
                 # Always record the part (or command) we are at
-                self.experiment_trace.record(
+                self.new_trace.record(
                     AtPartEntry(
                         datetime.now(),
                         current_part_full_name
@@ -101,7 +108,9 @@ class ExperimentManager:
                     current_part_full_name not in self.experiment_parts:
                     if path_index < len(old_part_path):
                         # If retracing, use the past researcher's decision from the old run
-                        next_part_short_name = self._convert_to_short_name(old_part_path[path_index + 1])
+                        next_part_short_name = self._convert_to_short_name(
+                            old_part_path[path_index + 1].part_name
+                        )
                     else:
                         # Ask the current researcher what to do next
                         next_part_short_name = self._get_researcher_decision(current_part_full_name)
@@ -113,7 +122,7 @@ class ExperimentManager:
                 current_part_full_name = self._convert_to_full_name(next_part_short_name)
 
             # Tear down the experiment run
-            self.experiment_trace.record(
+            self.new_trace.record(
                 AtPartEntry(
                     datetime.now(),
                     "quit"
@@ -135,7 +144,7 @@ class ExperimentManager:
         self._build_output_dirs()
         self._construct_parts()
         print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started")
-        self.experiment_trace.record(
+        self.new_trace.record(
             ExperimentBeginEntry(
                 datetime.now(),
                 self.config.experiment_name,
@@ -145,7 +154,7 @@ class ExperimentManager:
 
     def _end_experiment_run(self) -> None:
         print(f"Experiment '{self.config.experiment_name}' run {self.run_number} completed")
-        self.experiment_trace.record(
+        self.new_trace.record(
             ExperimentEndEntry(
                 datetime.now(),
                 self.config.experiment_name,
@@ -170,12 +179,13 @@ class ExperimentManager:
             if isinstance(current_part, Step):
                 current_part.run_step()
                 next_part_short_name = current_part._context.config.next_part.get("")
-                self.experiment_trace.record(
+                self.new_trace.record(
                     StepEntry(
                         datetime.now(),
                         current_part_full_name,
                         self.experiment_data,
-                        self.new_experiment_data
+                        self.new_experiment_data,
+                        self.new_trace_part_data
                     )
                 )
             elif isinstance(current_part, Decision):
@@ -184,22 +194,24 @@ class ExperimentManager:
                     next_part_short_name = route_name
                 else:
                     next_part_short_name = current_part._context.config.next_part.get(route_name)
-                self.experiment_trace.record(
+                self.new_trace.record(
                     DecisionEntry(
                         datetime.now(),
                         current_part_full_name,
-                        next_part_short_name
+                        next_part_short_name,
+                        self.new_trace_part_data
                     )
                 )
             elif isinstance(current_part, Flow):
                 next_part_short_name = current_part.begin_flow()
                 # Keep track of what level we're in
                 self.flow_stack.append(current_part_full_name)
-                self.experiment_trace.record(
+                self.new_trace.record(
                     FlowBeginEntry(
                         datetime.now(),
                         current_part_full_name,
-                        next_part_short_name
+                        next_part_short_name,
+                        self.new_trace_part_data
                     )
                 )
             else:
@@ -210,7 +222,7 @@ class ExperimentManager:
             self.experiment_data = deepcopy(self.new_experiment_data)
         except Exception as e:
             print(f"Error while running part '{current_part_full_name}': {e}")
-            self.experiment_trace.record(
+            self.new_trace.record(
                 ErrorEntry(
                     datetime.now(),
                     current_part_full_name,
@@ -235,15 +247,16 @@ class ExperimentManager:
             try:
                 flow_part.end_flow()
                 next_part_short_name = flow_part._context.config.next_part.get("")
-                self.experiment_trace.record(
+                self.new_trace.record(
                     FlowEndEntry(
                         datetime.now(),
-                        flow_part_full_name
+                        flow_part_full_name,
+                        self.new_trace_part_data
                     )
                 )
             except Exception as e:
                 print(f"Error ending flow '{flow_part_full_name}': {e}")
-                self.experiment_trace.record(
+                self.new_trace.record(
                     ErrorEntry(
                         datetime.now(),
                         flow_part_full_name,
@@ -269,7 +282,7 @@ class ExperimentManager:
         else:
             print(f"\nUnknown part: '{current_part_full_name}'\n")
         next_part_short_name = self._get_next_from_researcher()
-        self.experiment_trace.record(
+        self.new_trace.record(
             ResearcherDecisionEntry(
                 datetime.now(),
                 next_part_short_name
@@ -294,6 +307,20 @@ class ExperimentManager:
         Get a copy of the current experiment data.
         """
         return deepcopy(self.new_experiment_data)
+    
+    def _save_data_to_trace_entry(self, part_data: dict) -> None:
+        """
+        Store a data dictionary into the current trace entry as
+        'part_data'.
+        """
+        self.new_trace_part_data = part_data
+
+    def _load_data_from_retrace_entry(self) -> dict | None:
+        """
+        When retracing an old run of an experiment, retrieve any
+        'part_data' dictionary stored in the old trace entry.
+        """
+        return self.old_trace_part_data
 
     def _add_part(self, part_config: PartConfig) -> None:
         """
@@ -305,7 +332,7 @@ class ExperimentManager:
             part_type = self.config.part_types.get(part_config.type_name)
             part_context = PartContext(self, part_config)
             self.experiment_parts[part_config.full_name] = part_type.type(part_context)
-            self.experiment_trace.record(
+            self.new_trace.record(
                 PartAddEntry(
                     datetime.now(),
                     part_config.full_name,
@@ -324,7 +351,7 @@ class ExperimentManager:
         Remove the part with the given name from the experiment.
         """
         self.experiment_parts.pop(part_full_name, None)
-        self.experiment_trace.record(
+        self.new_trace.record(
             PartRemoveEntry(
                 datetime.now(),
                 part_full_name
@@ -370,9 +397,9 @@ class ExperimentManager:
         # Copy the config file to the new directory
         shutil.copy(self.config.file_path, os.path.join(self.out_dir_for_run, "config.toml"))
         # Create the experiment trace file
-        self.experiment_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
-        print(f"Creating experiment trace file: {self.experiment_trace_file_path}")
-        self.experiment_trace = ExperimentTrace(output_file_path=self.experiment_trace_file_path)
+        self.new_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
+        print(f"Creating experiment trace file: {self.new_trace_file_path}")
+        self.new_trace = ExperimentTrace(output_file_path=self.new_trace_file_path)
 
     def _convert_to_short_name(self, full_name: str | None) -> str | None:
         """

@@ -141,6 +141,25 @@ class _Part:
         Get a copy of the entire experiment data dictionary.
         """
         return self._context.manager._copy_experiment_data()
+    
+    def save_data_to_trace_entry(self, part_data: dict) -> None:
+        """
+        Store a data dictionary into the current trace entry as
+        'part_data'. This can be used to record any extra data
+        that is specific to this run of your part. Make sure it
+        is JSON-serializable. Overwrites any previously saved
+        'part_data' if called multiple times during the same part run.
+        """
+        self._context.manager._save_data_to_trace_entry(part_data)
+
+    def load_data_from_retrace_entry(self) -> dict | None:
+        """
+        When retracing an old run of an experiment, retrieve any
+        'part_data' dictionary that was saved for this part
+        in the trace entry. Returns None if no data was saved or
+        if we are not retracing.
+        """
+        return self._context.manager._load_data_from_retrace_entry()
 
 # Base classes for Steps, Decisions, and Flows.
 # Inherit from these and pass in the context
