@@ -500,4 +500,8 @@ class ExperimentManager:
         val = ""
         while val == "":
             val = input("> ").strip()
+            if val not in self._get_flow_parts_short_names(self._get_current_flow_full_name()) and \
+                val not in COMMAND_NAMES:
+                print(f"Invalid input: '{val}'")
+                val = ""
         return val
