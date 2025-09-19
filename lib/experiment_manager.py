@@ -11,7 +11,7 @@ from lib.experiment_parts import _Part, Step, Decision, Flow
 from lib.experiment_trace import ExperimentTrace, PartPathPiece, \
     AtPartEntry, ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, \
     PartAddEntry, PartRemoveEntry, ResearcherDecisionEntry, StepEntry, \
-    DecisionEntry, FlowBeginEntry, FlowEndEntry
+    DecisionEntry, FlowBeginEntry, FlowEndEntry, CustomEntry
 
 class ExperimentMode(enum.Enum):
     """
@@ -330,6 +330,18 @@ class ExperimentManager:
         'part_data' dictionary stored in the old trace entry.
         """
         return self.old_trace_part_data
+
+    def _insert_custom_trace_entry(self, event_type: str, event_data: dict | None) -> None:
+        """
+        Insert a custom trace entry into the experiment trace.
+        """
+        self.new_trace.record(
+            CustomEntry(
+                datetime.now(),
+                event_type,
+                event_data
+            )
+        )
 
     def _add_part(self, part_config: PartConfig) -> None:
         """

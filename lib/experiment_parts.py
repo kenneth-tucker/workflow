@@ -161,6 +161,19 @@ class _Part:
         """
         return self._context.manager._load_data_from_retrace_entry()
 
+    def insert_custom_trace_entry(self, event_type: str, event_data: dict | None = None) -> None:
+        """
+        Insert a custom trace entry into the experiment trace
+        at the current position. The event_type is a string
+        that identifies the type of the custom entry and
+        event_data is a dictionary of any JSON-serializable data
+        you want to include in the entry. This can be used to
+        record any extra information you want in the trace or
+        to signal tools that are monitoring the experiment using
+        the trace.
+        """
+        self._context.manager._insert_custom_trace_entry(event_type, event_data)
+
 # Base classes for Steps, Decisions, and Flows.
 # Inherit from these and pass in the context
 # to the constructor. You MUST implement some

@@ -197,6 +197,21 @@ class PartRemoveEntry(TraceEntry):
         super().__init__(timestamp, "part_remove")
         self.full_name = full_name
 
+class CustomEntry(TraceEntry):
+    """
+    Trace entry for custom events that part
+    implementations may want to log.
+    """
+    def __init__(
+        self,
+        timestamp: datetime,
+        event_type: str,
+        event_data: dict | None
+    ):
+        super().__init__(timestamp, "custom")
+        self.event_type = event_type
+        self.event_data = event_data
+
 class ExperimentTrace:
     """
     Class for tracing the execution of an experiment.
@@ -249,10 +264,17 @@ class ExperimentTrace:
             if isinstance(entry, AtPartEntry):
                 # The entry after the AtPartEntry may have part_data, assuming
                 # it is a StepEntry, DecisionEntry, FlowBeginEntry, or FlowEndEntry
-                # and not something like ErrorEntry or ResearcherDecisionEntry
-                next_entry = self.trace[i + 1] if i + 1 < len(self.trace) else None
-                if isinstance(next_entry, (StepEntry, DecisionEntry, FlowBeginEntry, FlowEndEntry)):
-                    part_data = next_entry.part_data
+                # and not something like ErrorEntry or ResearcherDecisionEntry.
+                # We do need to skip over any CustomEntry entries that the part
+                # implementation may have logged.
+                j = i + 1
+                while True:
+                    part_entry = self.trace[j] if j < len(self.trace) else None
+                    if not isinstance(part_entry, CustomEntry):
+                        break
+                    j += 1
+                if isinstance(part_entry, (StepEntry, DecisionEntry, FlowBeginEntry, FlowEndEntry)):
+                    part_data = part_entry.part_data
                 else:
                     part_data = None
                 part_path.append(PartPathPiece(entry.part_name, part_data))
@@ -348,6 +370,12 @@ class ExperimentTrace:
                     self.parsed_input.append(PartRemoveEntry(
                         timestamp=timestamp,
                         full_name=entry["full_name"]
+                    ))
+                case "custom":
+                    self.parsed_input.append(CustomEntry(
+                        timestamp=timestamp,
+                        event_type=entry["event_type"],
+                        event_data=entry["event_data"]
                     ))
                 case _:
                     raise ValueError(f"Unknown trace entry type: {entry.get('event')}")
