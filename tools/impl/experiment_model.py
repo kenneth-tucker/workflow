@@ -25,11 +25,13 @@ class PartModel:
         full_name: str,
         file_path: str,
         raw_config: dict,
+        type_name: str,
         part_category: str,
     ):
         self.full_name = full_name
         self.file_path = file_path
         self.raw_config = raw_config
+        self.type_name = type_name
         self.part_category = part_category
 
 class ErrorModel:
@@ -104,6 +106,7 @@ class ExperimentModel:
                         full_name=parent_full_name,
                         file_path="",
                         raw_config={},
+                        type_name="",
                         part_category="flow",  # Assume parent is a flow
                     )
                     self.experiment_parts[parent_part.full_name] = parent_part
@@ -111,6 +114,7 @@ class ExperimentModel:
                     full_name=trace_entry["full_name"],
                     file_path=trace_entry["file_path"],
                     raw_config=trace_entry["raw_config"],
+                    type_name=trace_entry["raw_config"].get("type_name", ""),
                     part_category=trace_entry["part_category"],
                 )
                 self.experiment_parts[part.full_name] = part
@@ -118,7 +122,7 @@ class ExperimentModel:
                 self.experiment_parts.pop(trace_entry["full_name"], None)
             case "custom":
                 # Handle custom trace entries if needed
-                if trace_entry["event_type"] == "waiting_for_researcher":
+                if trace_entry["event_type"] == "waiting_for_researcher_input":
                     self.experiment_state = ExperimentState.WAITING_FOR_RESEARCHER
             case _:
                 raise ValueError(f"Unknown trace entry type: {trace_entry.get('event')}")

@@ -118,7 +118,7 @@
                 <div class="flowchart-container">
                     <img id="flowchartImage" class="flowchart-image" src="" alt="Flowchart">
                 </div>
-                <div id="eventBar" style="background:#e8eaf6;padding:8px 16px;font-size:1.08em;border-bottom:1px solid #d0d0d0;"></div>
+                <div id="eventBar" style="background:#e8eaf6;padding:8px 16px;font-size:1.08em;border-bottom:1px solid #d0d0d0; overflow-x:auto; white-space:nowrap;"></div>
                 <div class="slide-row">
                     <div class="slide-controls">
                         <button id="prevBtn" class="slide-btn">&#9664;&#9664;</button>
@@ -281,7 +281,7 @@
             // Format timestamp to human readable
             const date = new Date(snapshot.timestamp);
             const readable = date.toLocaleString();
-            eventBar.textContent = `${readable} | Event: ${snapshot.event || 'N/A'}`;
+            eventBar.textContent = `${readable} | ${snapshot.event_info || 'N/A'}`;
         }
 
         function updateUI() {

@@ -55,7 +55,7 @@ class WebData(SnapshotConsumer):
             snapshot_index = len(self.experiment_json["snapshots"])
             snapshot_json = {
                 "timestamp": snapshot.timestamp.isoformat(),
-                "event": snapshot.event,
+                "event_info": snapshot.event_info,
                 "label": f"{snapshot_index + 1}",
                 "flowchart": flowchart_url,
                 "data": snapshot.experiment_model.experiment_data
