@@ -15,12 +15,14 @@
 # 3. Install Flask for the web server:
 # pip install flask
 
+
 import argparse
 import os
 import sys
 from time import sleep
 import webbrowser
 import threading
+import socket
 
 # Allow running this script directly from any directory without installing the package
 if __package__ is None or __package__ == "":
@@ -34,6 +36,17 @@ from tools.impl.web_server import web_data, app
 
 DEFAULT_SERVER_NAME = "127.0.0.1"
 DEFAULT_PORT_NUMBER = 50000
+MAX_PORT_NUMBER = 50100  # Try up to this port
+
+def find_open_port(host, start_port, max_port):
+    for port in range(start_port, max_port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind((host, port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"No open port found in range {start_port}-{max_port-1}")
 
 def view_experiment(run_dir: str):
     run_dir = os.path.normpath(run_dir)
@@ -45,16 +58,17 @@ def view_experiment(run_dir: str):
     snapshot_generator = SnapshotGenerator()
     # Make the web data reflect new snapshots as they arrive
     snapshot_generator.add_observer("web_data", web_data)
+    # Find an open port for the web server
+    port_number = find_open_port(DEFAULT_SERVER_NAME, DEFAULT_PORT_NUMBER, MAX_PORT_NUMBER)
+
     # Setup the web server to show the experiment
-    # Note: you may need to adjust the host and port as needed
-    # (e.g. if the port is already in use)
     # Note: we run the server in a separate thread so that
     # it does not block the trace monitoring
     server_thread = threading.Thread(
         target=app.run,
         kwargs={
             "host": DEFAULT_SERVER_NAME,
-            "port": DEFAULT_PORT_NUMBER,
+            "port": port_number,
             "debug": False,
             "use_reloader": False
         },
@@ -64,7 +78,8 @@ def view_experiment(run_dir: str):
     # Give the server a moment to start up
     sleep(1)
     # Open the web page in the default browser
-    webbrowser.open(f"http://{DEFAULT_SERVER_NAME}:{DEFAULT_PORT_NUMBER}")
+    webbrowser.open(f"http://{DEFAULT_SERVER_NAME}:{port_number}")
+
     # Update the web view whenever there is a new snapshot
     # React to changes in the trace file
     trace_monitor = TraceMonitor(trace_file_path)
@@ -73,6 +88,8 @@ def view_experiment(run_dir: str):
     trace_monitor.add_observer("snapshot_generator", snapshot_generator)
     # Returns when the end of the trace file is reached
     trace_monitor.monitor()
+    print("Experiment monitoring completed")
+
     # Keep the server alive until the user is done
     input("Press <ENTER> to exit...")
 
