@@ -9,4 +9,4 @@ class TracePrinter(TraceObserver):
     """
     def on_trace_entry(self, trace_entry: dict):
         pprint.pprint(trace_entry)
-        print()
+        print("", flush=True)

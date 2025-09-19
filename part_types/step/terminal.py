@@ -61,7 +61,7 @@ class TerminalStep(Step):
 
         if self.store_name is None:
             # Just print the prompt without getting input
-            print(text)
+            print(text, flush=True)
             return
         else:
             # Handle getting input from the researcher or retracing
@@ -78,7 +78,7 @@ class TerminalStep(Step):
 
             if old_input_text is not None:
                 # Use the old input
-                print(f"{text} {old_input_text} (from trace)")
+                print(f"{text} {old_input_text} (from trace)", flush=True)
                 researcher_input = old_input_text
                 converted_input = self.input_type_converter(old_input_text)
             else:
@@ -94,8 +94,8 @@ class TerminalStep(Step):
                     try:
                         converted_input = self.input_type_converter(researcher_input)
                     except Exception as e:
-                        print(f"Could not convert '{researcher_input}' to {self.input_type_name}")
-                        print("Please try again.")
+                        print(f"Could not convert '{researcher_input}' to {self.input_type_name}", flush=True)
+                        print("Please try again.", flush=True)
 
             # Store the results
             self.save_data_to_trace_entry({"researcher_input": researcher_input})

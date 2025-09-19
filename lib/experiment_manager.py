@@ -126,7 +126,7 @@ class ExperimentManager:
                     path_index < len(old_part_path) and \
                     next_part_short_name == "quit":
                     print(f"Continuing from old run at path index {path_index} "
-                          f"(path length is {len(old_part_path)})")
+                          f"(path length is {len(old_part_path)})", flush=True)
                     next_part_short_name = None
                     old_part_path = old_part_path[:path_index]
 
@@ -157,7 +157,7 @@ class ExperimentManager:
         self.new_experiment_data = deepcopy(self.config.initial_values)
         self._build_output_dirs()
         self._construct_parts()
-        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started")
+        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started", flush=True)
         self.new_trace.record(
             ExperimentBeginEntry(
                 datetime.now(),
@@ -168,7 +168,7 @@ class ExperimentManager:
         )
 
     def _end_experiment_run(self) -> None:
-        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} completed")
+        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} completed", flush=True)
         self.new_trace.record(
             ExperimentEndEntry(
                 datetime.now(),
@@ -236,7 +236,7 @@ class ExperimentManager:
             # Update the experiment data to the new data after a successful run
             self.experiment_data = deepcopy(self.new_experiment_data)
         except Exception as e:
-            print(f"Error while running part '{current_part_full_name}': {e}")
+            print(f"Error while running part '{current_part_full_name}': {e}", flush=True)
             self.new_trace.record(
                 ErrorEntry(
                     datetime.now(),
@@ -270,7 +270,7 @@ class ExperimentManager:
                     )
                 )
             except Exception as e:
-                print(f"Error ending flow '{flow_part_full_name}': {e}")
+                print(f"Error ending flow '{flow_part_full_name}': {e}", flush=True)
                 self.new_trace.record(
                     ErrorEntry(
                         datetime.now(),
@@ -293,9 +293,9 @@ class ExperimentManager:
         """
         self._print_flow_info()
         if current_part_full_name is None:
-            print("\nNo part specified\n")
+            print("\nNo part specified\n", flush=True)
         else:
-            print(f"\nUnknown part: '{current_part_full_name}'\n")
+            print(f"\nUnknown part: '{current_part_full_name}'\n", flush=True)
         next_part_short_name = self._get_next_from_researcher()
         return next_part_short_name
 
@@ -402,7 +402,7 @@ class ExperimentManager:
         Note: this method figures out the run number by looking at
         the existing runs in the output directory.
         """
-        print("Setting up output directories...")
+        print("Setting up output directories...", flush=True)
         out_dir_for_experiment = os.path.join(self.config.out_dir, self.config.experiment_name)
         os.makedirs(out_dir_for_experiment, exist_ok=True)
         existing_runs = [
@@ -414,13 +414,13 @@ class ExperimentManager:
             (int(d.split("_")[1]) for d in existing_runs), default=0
         ) + 1
         self.out_dir_for_run = os.path.join(out_dir_for_experiment, f"run_{self.run_number}")
-        print(f"Creating directory for experiment '{self.config.experiment_name}' run {self.run_number}: {self.out_dir_for_run}")
+        print(f"Creating directory for experiment '{self.config.experiment_name}' run {self.run_number}: {self.out_dir_for_run}", flush=True)
         os.makedirs(self.out_dir_for_run, exist_ok=False)
         # Copy the config file to the new directory
         shutil.copy(self.config.file_path, os.path.join(self.out_dir_for_run, "config.toml"))
         # Create the experiment trace file
         self.new_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
-        print(f"Creating experiment trace file: {self.new_trace_file_path}")
+        print(f"Creating experiment trace file: {self.new_trace_file_path}", flush=True)
         self.new_trace = ExperimentTrace(output_file_path=self.new_trace_file_path)
         # Call the callback function, if provided
         if self.on_output_dir_built is not None:
@@ -478,13 +478,13 @@ class ExperimentManager:
         """
         flow_full_name = self._get_current_flow_full_name()
         if not flow_full_name:
-            print(f"You are in the top-level flow of experiment '{self.config.experiment_name}', which has these parts:")
+            print(f"You are in the top-level flow of experiment '{self.config.experiment_name}', which has these parts:", flush=True)
         else:
-            print(f"You are in the '{flow_full_name}' flow, which has these parts:")
+            print(f"You are in the '{flow_full_name}' flow, which has these parts:", flush=True)
         short_names = self._get_flow_parts_short_names(flow_full_name)
         for short_name in short_names:
             full_name = self._convert_to_full_name(short_name)
-            print(f" - {short_name} : {self.experiment_parts[full_name]._context.config.type_name}")
+            print(f" - {short_name} : {self.experiment_parts[full_name]._context.config.type_name}", flush=True)
 
     def _get_next_from_researcher(self) -> str:
         """
@@ -494,7 +494,8 @@ class ExperimentManager:
             "Enter one of the following:\n"
             " - the name of the next part to run\n"
             " - 'done' to leave the current flow\n"
-            " - 'quit' to end the entire experiment\n\n"
+            " - 'quit' to end the entire experiment\n\n",
+            flush=True
         )
         val = ""
         while val == "":

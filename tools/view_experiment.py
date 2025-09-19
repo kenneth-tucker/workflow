@@ -88,7 +88,7 @@ def view_experiment(run_dir: str):
     trace_monitor.add_observer("snapshot_generator", snapshot_generator)
     # Returns when the end of the trace file is reached
     trace_monitor.monitor()
-    print("Experiment monitoring completed")
+    print("Experiment monitoring completed", flush=True)
 
     # Keep the server alive until the user is done
     input("Press <ENTER> to exit...")

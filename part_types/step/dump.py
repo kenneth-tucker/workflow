@@ -9,10 +9,10 @@ class DumpStep(Step):
         super().__init__(context)
 
     def run_step(self) -> None:
-        print("Experiment Data:")
+        print("Experiment Data:", flush=True)
         experiment_data = self.copy_experiment_data()
         if not experiment_data:
-            print("  (no data)")
+            print("  (no data)", flush=True)
             return
         for name, value in sorted(experiment_data.items()):
-            print(f"  {name}: {value}")
+            print(f"  {name}: {value}", flush=True)
