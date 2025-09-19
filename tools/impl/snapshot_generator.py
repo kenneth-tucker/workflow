@@ -55,31 +55,30 @@ class SnapshotGenerator(TraceObserver):
                 elif trace_entry["part_name"] in COMMAND_NAMES:
                     event_info = f"Command '{trace_entry['part_name']}' issued"
                 else:
-                    event_info = f"Waiting for researcher to decide what to do next"
+                    event_info = f"Waiting for the researcher to decide what to do next"
             case "error":
                 event_info = f"Error occurred at '{trace_entry['part_name']}' with message: '{trace_entry['error_message']}'"
             case "researcher_decision":
                 event_info = f"Researcher decision made, going to '{trace_entry['next_part']}'"
             case "step":
-                event_info = f"Step completed"
+                event_info = f"Step '{trace_entry['step_name']}' completed"
             case "decision":
                 if "next_part" in trace_entry:
-                    event_info = f"Decision made, going to '{trace_entry['next_part']}'"
+                    event_info = f"Decision '{trace_entry['decision_name']}' made, going to '{trace_entry['next_part']}'"
                 else:
-                    event_info = f"Decision deferred to researcher"
+                    event_info = f"Decision '{trace_entry['decision_name']}' has been delegated to the researcher"
             case "flow_begin":
                 if "first_part" in trace_entry:
-                    event_info = f"Flow started at '{trace_entry['first_part']}'"
+                    event_info = f"Flow '{trace_entry['flow_name']}' started at '{trace_entry['first_part']}'"
                 else:
-                    event_info = f"Flow started in manual mode"
+                    event_info = f"Flow '{trace_entry['flow_name']}' started in manual mode"
             case "flow_end":
-                event_info = f"Flow completed"
+                event_info = f"Flow '{trace_entry['flow_name']}' completed"
             case "part_add":
                 part = self.cur_model.experiment_parts[trace_entry["full_name"]]
                 event_info = f"Added a part named '{part.full_name}' (of type '{part.type_name}')"
             case "part_remove":
-                part = self.cur_model.experiment_parts[trace_entry["full_name"]]
-                event_info = f"Removed a part named '{part.full_name}' (of type '{part.type_name}')"
+                event_info = f"Removed a part named '{trace_entry["full_name"]}'"
             case "custom":
                 # Add descriptions for custom events here
                 match trace_entry.get("event_type"):
