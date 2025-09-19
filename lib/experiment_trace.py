@@ -9,6 +9,15 @@ from datetime import datetime
 # this version number and add handling for converting old formats
 TRACE_FILE_VERSION = 1
 
+class PartPathPiece:
+    """
+    A piece of a path through the experiment, consisting of the
+    part name and optional part data that may be associated with it.
+    """
+    def __init__(self, part_name: str | None, part_data: dict | None):
+        self.part_name = part_name
+        self.part_data = part_data
+
 # Types of trace entries
 
 class TraceEntry:
@@ -100,12 +109,14 @@ class StepEntry(TraceEntry):
         timestamp: datetime,
         step_name: str,
         data_before: dict,
-        data_after: dict
+        data_after: dict,
+        part_data: dict | None
     ):
         super().__init__(timestamp, "step")
         self.step_name = step_name
         self.data_before = data_before
         self.data_after = data_after
+        self.part_data = part_data
 
 class DecisionEntry(TraceEntry):
     """
@@ -116,10 +127,12 @@ class DecisionEntry(TraceEntry):
         timestamp: datetime,
         decision_name: str,
         next_part: str | None,
+        part_data: dict | None
     ):
         super().__init__(timestamp, "decision")
         self.decision_name = decision_name
         self.next_part = next_part
+        self.part_data = part_data
 
 class FlowBeginEntry(TraceEntry):
     """
@@ -130,10 +143,12 @@ class FlowBeginEntry(TraceEntry):
         timestamp: datetime,
         flow_name: str,
         first_part: str | None,
+        part_data: dict | None
     ):
         super().__init__(timestamp, "flow_begin")
         self.flow_name = flow_name
         self.first_part = first_part
+        self.part_data = part_data
 
 class FlowEndEntry(TraceEntry):
     """
@@ -143,9 +158,11 @@ class FlowEndEntry(TraceEntry):
         self,
         timestamp: datetime,
         flow_name: str,
+        part_data: dict | None
     ):
         super().__init__(timestamp, "flow_end")
         self.flow_name = flow_name
+        self.part_data = part_data
 
 class PartAddEntry(TraceEntry):
     """
@@ -222,14 +239,23 @@ class ExperimentTrace:
             self.output_trace_file.write(',\n')
             self.output_trace_file.flush()
 
-    def get_part_path(self) -> list[str]:
+    def get_part_path(self) -> list[PartPathPiece]:
         """
-        Get the full list of part names in the path taken through the experiment.
+        Get the full list of part names in the path taken through the experiment,
+        including any 'part_data' associated with that part of the path.
         """
         part_path = []
-        for entry in self.trace:
+        for i, entry in enumerate(self.trace):
             if isinstance(entry, AtPartEntry):
-                part_path.append(entry.part_name)
+                # The entry after the AtPartEntry may have part_data, assuming
+                # it is a StepEntry, DecisionEntry, FlowBeginEntry, or FlowEndEntry
+                # and not something like ErrorEntry or ResearcherDecisionEntry
+                next_entry = self.trace[i + 1] if i + 1 < len(self.trace) else None
+                if isinstance(next_entry, (StepEntry, DecisionEntry, FlowBeginEntry, FlowEndEntry)):
+                    part_data = next_entry.part_data
+                else:
+                    part_data = None
+                part_path.append(PartPathPiece(entry.part_name, part_data))
         return part_path
 
     # Private helper methods
@@ -287,24 +313,28 @@ class ExperimentTrace:
                         timestamp=timestamp,
                         step_name=entry["step_name"],
                         data_before=entry["data_before"],
-                        data_after=entry["data_after"]
+                        data_after=entry["data_after"],
+                        part_data=entry.get("part_data")
                     ))
                 case "decision":
                     self.parsed_input.append(DecisionEntry(
                         timestamp=timestamp,
                         decision_name=entry["decision_name"],
-                        next_part=entry["next_part"]
+                        next_part=entry["next_part"],
+                        part_data=entry.get("part_data")
                     ))
                 case "flow_begin":
                     self.parsed_input.append(FlowBeginEntry(
                         timestamp=timestamp,
                         flow_name=entry["flow_name"],
-                        first_part=entry["first_part"]
+                        first_part=entry["first_part"],
+                        part_data=entry.get("part_data")
                     ))
                 case "flow_end":
                     self.parsed_input.append(FlowEndEntry(
                         timestamp=timestamp,
-                        flow_name=entry["flow_name"]
+                        flow_name=entry["flow_name"],
+                        part_data=entry.get("part_data")
                     ))
                 case "part_add":
                     self.parsed_input.append(PartAddEntry(
