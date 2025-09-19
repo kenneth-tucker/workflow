@@ -63,12 +63,12 @@ class SnapshotGenerator(TraceObserver):
             case "step":
                 event_info = f"Step '{trace_entry['step_name']}' completed"
             case "decision":
-                if "next_part" in trace_entry:
+                if trace_entry.get("next_part"):
                     event_info = f"Decision '{trace_entry['decision_name']}' made, going to '{trace_entry['next_part']}'"
                 else:
                     event_info = f"Decision '{trace_entry['decision_name']}' has been delegated to the researcher"
             case "flow_begin":
-                if "first_part" in trace_entry:
+                if trace_entry.get("first_part"):
                     event_info = f"Flow '{trace_entry['flow_name']}' started at '{trace_entry['first_part']}'"
                 else:
                     event_info = f"Flow '{trace_entry['flow_name']}' started in manual mode"
@@ -90,7 +90,7 @@ class SnapshotGenerator(TraceObserver):
                     case _:
                         # Generic custom event description
                         event_info = f"Event '{trace_entry['event_type']}' occurred"
-                        if "event_data" in trace_entry:
+                        if trace_entry.get("event_data"):
                             event_info += f" with data: {trace_entry['event_data']}"
             case _:
                 event_info = trace_entry.get("event", "")
