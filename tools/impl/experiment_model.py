@@ -116,5 +116,9 @@ class ExperimentModel:
                 self.experiment_parts[part.full_name] = part
             case "part_remove":
                 self.experiment_parts.pop(trace_entry["full_name"], None)
+            case "custom":
+                # Handle custom trace entries if needed
+                if trace_entry["event_type"] == "waiting_for_researcher":
+                    self.experiment_state = ExperimentState.WAITING_FOR_RESEARCHER
             case _:
                 raise ValueError(f"Unknown trace entry type: {trace_entry.get('event')}")

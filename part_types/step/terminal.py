@@ -82,6 +82,11 @@ class TerminalStep(Step):
                 researcher_input = old_input_text
                 converted_input = self.input_type_converter(old_input_text)
             else:
+                # Signal in the trace that we are waiting for researcher input
+                self.insert_custom_trace_entry(
+                    event_type="waiting_for_researcher",
+                    event_data={"prompt": text}
+                )
                 # Get researcher input until it can be converted to the desired type
                 converted_input = None
                 while converted_input is None:
