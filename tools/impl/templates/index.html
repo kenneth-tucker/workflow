@@ -194,14 +194,17 @@
             }
             if (experiment.state) {
                 content += `[${experiment.state}]`;
-                if(experiment.state.toLowerCase() === 'completed') {
-                    topBar.style.background = '#4caf50';
+                if(experiment.state.toLowerCase() === 'not started') {
+                    topBar.style.background = '#2d3e50';
                 }
                 else if(experiment.state.toLowerCase() === 'running') {
                     topBar.style.background = '#2196f3';
                 }
-                else if(experiment.state.toLowerCase() === 'not started') {
-                    topBar.style.background = '#2d3e50';
+                else if(experiment.state.toLowerCase() === 'waiting for researcher') {
+                    topBar.style.background = '#8b4500';
+                }
+                else if(experiment.state.toLowerCase() === 'completed') {
+                    topBar.style.background = '#4caf50';
                 }
                 else {
                     topBar.style.background = '#2d3e50';

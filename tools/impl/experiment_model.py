@@ -1,9 +1,19 @@
 from datetime import datetime
 from enum import Enum
 
+# Special commands that can be used in the experiment.
+# Note: needs to match the COMMAND_NAMES in lib
+COMMAND_NAMES = {
+    # Leave the current flow
+    "done",
+    # Quit the experiment
+    "quit"
+}
+
 class ExperimentState(Enum):
     NOT_STARTED = "not started"
     RUNNING = "running"
+    WAITING_FOR_RESEARCHER = "waiting for researcher"
     COMPLETED = "completed"
 
 class PartModel:
@@ -58,6 +68,13 @@ class ExperimentModel:
                 self.experiment_state = ExperimentState.COMPLETED
             case "at_part":
                 self.part_path.append(trace_entry["part_name"])
+                # The researcher needs to decide what to do next if
+                # part_name is not a valid part or command
+                if trace_entry["part_name"] in self.experiment_parts or \
+                   trace_entry["part_name"] in COMMAND_NAMES:
+                    self.experiment_state = ExperimentState.RUNNING
+                else:
+                    self.experiment_state = ExperimentState.WAITING_FOR_RESEARCHER
             case "error":
                 self.error_stack.append(
                     ErrorModel(
