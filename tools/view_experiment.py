@@ -14,6 +14,9 @@
 #
 # 3. Install Flask for the web server:
 # pip install flask
+#
+# 4. Install psutil for process management:
+# pip install psutil
 
 
 import argparse
