@@ -1,3 +1,4 @@
+import os
 from typing import override
 from lib.utils.part_utils import PartConfig, PartTypeInfo
 from lib.utils.exceptions import ConfigError
@@ -12,6 +13,15 @@ class _Part:
         # Do not access _context in your class, use the helper methods in this
         # class instead.
         self._context = context
+
+    def get_output_file_path(self, relative_path: str = "") -> str:
+        """
+        Get the file path you should use for this run of the experiment.
+        """
+        if relative_path:
+            normalized_path = os.path.normpath(relative_path)
+            return os.path.join(self._context.manager.out_dir_for_run, normalized_path)
+        return self._context.manager.out_dir_for_run
 
     def get_config_file_path(self) -> str:
         """
