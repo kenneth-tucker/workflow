@@ -71,9 +71,10 @@ class ExperimentModel:
             case "at_part":
                 self.part_path.append(trace_entry["part_name"])
                 # The researcher needs to decide what to do next if
-                # part_name is not a valid part or command
+                # part_name is not a valid part or, possibly, if quit
+                # is given during a retrace
                 if trace_entry["part_name"] in self.experiment_parts or \
-                   trace_entry["part_name"] in COMMAND_NAMES:
+                   trace_entry["part_name"] == "done":
                     self.experiment_state = ExperimentState.RUNNING
                 else:
                     self.experiment_state = ExperimentState.WAITING_FOR_RESEARCHER
