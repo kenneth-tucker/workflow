@@ -280,23 +280,54 @@
             }
         }
 
+        function isHiddenKey(key) {
+            // Returns true if any part of the key path starts with _
+            return key.split('.').some(k => k.startsWith('_'));
+        }
+
+        function flattenData(obj, prefix = '') {
+            // Flattens nested objects into dot notation keys
+            let result = {};
+            for (const [k, v] of Object.entries(obj)) {
+                const fullKey = prefix ? `${prefix}.${k}` : k;
+                if (v && typeof v === 'object' && !Array.isArray(v)) {
+                    Object.assign(result, flattenData(v, fullKey));
+                } else {
+                    result[fullKey] = v;
+                }
+            }
+            return result;
+        }
+
         function renderDataList() {
-            // Highlight changes from previous slide
             dataList.innerHTML = '';
-            const currData = experiment.snapshots[currentSlide].data;
+            const currData = flattenData(experiment.snapshots[currentSlide].data);
             let prevData = null;
             if (currentSlide > 0) {
-                prevData = experiment.snapshots[currentSlide - 1].data;
+                prevData = flattenData(experiment.snapshots[currentSlide - 1].data);
             }
-            Object.entries(currData).forEach(([key, value]) => {
+            // Separate visible and hidden keys
+            const visible = [];
+            const hidden = [];
+            for (const key of Object.keys(currData)) {
+                if (isHiddenKey(key)) {
+                    hidden.push(key);
+                } else {
+                    visible.push(key);
+                }
+            }
+            visible.sort();
+            hidden.sort();
+
+            // Render visible data
+            for (const key of visible) {
+                const value = currData[key];
                 const li = document.createElement('li');
                 li.textContent = `${key}: ${value}`;
                 if (prevData) {
                     if (prevData[key] === undefined) {
-                        // New value
                         li.style.background = '#ffe5c2';
                     } else {
-                        // Check if changed
                         const prevVal = prevData[key];
                         let isChanged;
                         if (typeof value === 'object' && value !== null) {
@@ -310,7 +341,45 @@
                     }
                 }
                 dataList.appendChild(li);
-            });
+            }
+
+            // Render hidden data in a collapsible section
+            if (hidden.length > 0) {
+                const details = document.createElement('details');
+                details.style.marginTop = '18px';
+                const summary = document.createElement('summary');
+                summary.textContent = `Hidden (${hidden.length} Item${hidden.length === 1 ? '' : 's'})`;
+                summary.style.fontWeight = 'bold';
+                details.appendChild(summary);
+                let first = true;
+                for (const key of hidden) {
+                    const value = currData[key];
+                    const li = document.createElement('li');
+                    li.textContent = `${key}: ${value}`;
+                    if (first) {
+                        li.style.marginTop = '8px';
+                        first = false;
+                    }
+                    if (prevData) {
+                        if (prevData[key] === undefined) {
+                            li.style.background = '#ffe5c2';
+                        } else {
+                            const prevVal = prevData[key];
+                            let isChanged;
+                            if (typeof value === 'object' && value !== null) {
+                                isChanged = JSON.stringify(prevVal) !== JSON.stringify(value);
+                            } else {
+                                isChanged = prevVal !== value;
+                            }
+                            if (isChanged) {
+                                li.style.background = '#ffe5c2';
+                            }
+                        }
+                    }
+                    details.appendChild(li);
+                }
+                dataList.appendChild(details);
+            }
         }
 
         function renderEventBar() {

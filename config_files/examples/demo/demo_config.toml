@@ -13,6 +13,7 @@ out_dir = "../../../my_results/examples"
 researcher = "Bob"
 some_number = 42
 some_list = ["red", "yellow", "blue"]
+_hidden_message = "The cake is a lie"
 
 
 [part]
@@ -36,8 +37,9 @@ Enter 1 to change your name
 Enter 2 to see the experiment data
 Enter 3 to use a calculator
 Enter 4 to load in a config
-Enter 5 to enter manual mode
-Enter 6 to quit
+Enter 5 to change the hidden message
+Enter 6 to enter manual mode
+Enter 7 to quit
 
 > """
 enter = "int"
@@ -51,8 +53,9 @@ option_1 = "name_change"
 option_2 = "dump"
 option_3 = "my_calculator"
 option_4 = "load_prompt"
-# option_5 assumed None since absent   
-option_6 = "quit"
+option_5 = "change_hidden_message"
+# option_6 assumed None since absent   
+option_7 = "quit"
 try_again = "menu"
 [part.decide_option.config_values]
 statements = [
@@ -62,6 +65,7 @@ statements = [
     "option_4 if {menu_option} == 4",
     "option_5 if {menu_option} == 5",
     "option_6 if {menu_option} == 6",
+    "option_7 if {menu_option} == 7",
     "else try_again"
 ]
 
@@ -104,3 +108,12 @@ type_name = "flow.load"
 next_part = "menu"
 [part.my_dynamically_loaded_flow.input_names]
 path = "flow_config_path"
+
+
+[part.change_hidden_message]
+type_name = "step.terminal"
+next_part = "menu"
+[part.change_hidden_message.config_values]
+prompt = "Enter the message: "
+enter = "str"
+to = "_hidden_message"
