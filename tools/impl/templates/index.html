@@ -45,17 +45,37 @@
         .flowchart-container {
             flex: 1;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
             min-height: 0;
+            min-width: 0;
             padding: 24px;
         }
-        .flowchart-image {
-            max-width: 100%;
-            max-height: 100%;
+        .flowchart-scroll {
+            flex: 1;
+            overflow: auto;
+            background: #fafafa;
             border: 1px solid #ccc;
             border-radius: 8px;
-            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            min-height: 0;
+        }
+        .flowchart-image {
+            display: block;
+            max-width: none;
+            max-height: none;
+            transition: transform 0.2s;
+        }
+        .zoom-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .zoom-slider {
+            width: 140px;
         }
         .slide-row {
             display: flex;
@@ -116,7 +136,14 @@
         <div class="main-content">
             <div class="left-pane">
                 <div class="flowchart-container">
-                    <img id="flowchartImage" class="flowchart-image" src="" alt="Flowchart">
+                    <div class="zoom-controls">
+                        <label for="zoomSlider" style="font-size:0.98em;">Zoom:</label>
+                        <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="500" value="100" step="10">
+                        <span id="zoomLevel">100%</span>
+                    </div>
+                    <div class="flowchart-scroll">
+                        <img id="flowchartImage" class="flowchart-image" src="" alt="Flowchart">
+                    </div>
                 </div>
                 <div id="eventBar" style="background:#e8eaf6;padding:8px 16px;font-size:1.08em;border-bottom:1px solid #d0d0d0; overflow-x:auto; white-space:nowrap;"></div>
                 <div class="slide-row">
@@ -176,10 +203,13 @@
         let currentSlide = 0;
         let playing = false;
         let playInterval = null;
+        let zoom = 1.0;
 
         // DOM refs
         const topBar = document.getElementById('topBar');
         const flowchartImage = document.getElementById('flowchartImage');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomLevel = document.getElementById('zoomLevel');
         const slideThumbnails = document.getElementById('slideThumbnails');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
@@ -219,7 +249,15 @@
         function renderFlowchart() {
             flowchartImage.src = experiment.snapshots[currentSlide].flowchart;
             flowchartImage.alt = experiment.snapshots[currentSlide].label;
+            flowchartImage.style.transform = `scale(${zoom})`;
+            zoomLevel.textContent = Math.round(zoom * 100) + "%";
+            zoomSlider.value = Math.round(zoom * 100);
         }
+
+        zoomSlider.oninput = (e) => {
+            zoom = parseInt(zoomSlider.value, 10) / 100;
+            renderFlowchart();
+        };
 
         function renderSlides() {
             slideThumbnails.innerHTML = '';
