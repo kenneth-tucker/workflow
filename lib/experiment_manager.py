@@ -201,7 +201,6 @@ class ExperimentManager:
                     StepEntry(
                         datetime.now(),
                         current_part_full_name,
-                        self.experiment_data,
                         self.new_experiment_data,
                         self.new_trace_part_data
                     )

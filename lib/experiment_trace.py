@@ -108,13 +108,11 @@ class StepEntry(TraceEntry):
         self,
         timestamp: datetime,
         step_name: str,
-        data_before: dict,
         data_after: dict,
         part_data: dict | None
     ):
         super().__init__(timestamp, "step")
         self.step_name = step_name
-        self.data_before = data_before
         self.data_after = data_after
         self.part_data = part_data
 
@@ -334,7 +332,6 @@ class ExperimentTrace:
                     self.parsed_input.append(StepEntry(
                         timestamp=timestamp,
                         step_name=entry["step_name"],
-                        data_before=entry["data_before"],
                         data_after=entry["data_after"],
                         part_data=entry.get("part_data")
                     ))
