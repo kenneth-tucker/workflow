@@ -196,7 +196,7 @@
         fetchExperimentData();
         setInterval(fetchExperimentData, 500);
 
-        // State
+        // Track slide and playback state
         let currentSlide = 0;
         let playing = false;
         let playInterval = null;
@@ -206,6 +206,8 @@
         let prevImageHeight = null;
         let prevScrollLeft = null;
         let prevScrollTop = null;
+        // Track open/closed state of hidden data
+        let hiddenDetailsOpen = false;
 
         // DOM refs
         const topBar = document.getElementById('topBar');
@@ -424,6 +426,12 @@
                     }
                     details.appendChild(li);
                 }
+                // Restore open/closed state globally
+                details.open = hiddenDetailsOpen;
+                // Update state on toggle
+                details.addEventListener('toggle', () => {
+                    hiddenDetailsOpen = details.open;
+                });
                 dataList.appendChild(details);
             }
         }
