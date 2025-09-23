@@ -56,9 +56,6 @@
             background: #fafafa;
             border: 1px solid #ccc;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             min-width: 0;
             min-height: 0;
         }
@@ -66,7 +63,8 @@
             display: block;
             max-width: none;
             max-height: none;
-            transition: transform 0.2s;
+            transition: width 0.2s, height 0.2s;
+            position: relative;
         }
         .zoom-controls {
             display: flex;
@@ -139,7 +137,6 @@
                     <div class="zoom-controls">
                         <label for="zoomSlider" style="font-size:0.98em;">Zoom:</label>
                         <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="500" value="100" step="10">
-                        <span id="zoomLevel">100%</span>
                     </div>
                     <div class="flowchart-scroll">
                         <img id="flowchartImage" class="flowchart-image" src="" alt="Flowchart">
@@ -203,13 +200,17 @@
         let currentSlide = 0;
         let playing = false;
         let playInterval = null;
+        // Track positioning for the flowchart image
         let zoom = 1.0;
+        let prevImageWidth = null;
+        let prevImageHeight = null;
+        let prevScrollLeft = null;
+        let prevScrollTop = null;
 
         // DOM refs
         const topBar = document.getElementById('topBar');
         const flowchartImage = document.getElementById('flowchartImage');
         const zoomSlider = document.getElementById('zoomSlider');
-        const zoomLevel = document.getElementById('zoomLevel');
         const slideThumbnails = document.getElementById('slideThumbnails');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
@@ -247,11 +248,56 @@
         }
 
         function renderFlowchart() {
+            // Save scroll position before changing image
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            if (scrollDiv) {
+                prevScrollLeft = scrollDiv.scrollLeft;
+                prevScrollTop = scrollDiv.scrollTop;
+            }
             flowchartImage.src = experiment.snapshots[currentSlide].flowchart;
             flowchartImage.alt = experiment.snapshots[currentSlide].label;
-            flowchartImage.style.transform = `scale(${zoom})`;
-            zoomLevel.textContent = Math.round(zoom * 100) + "%";
+            // Set width/height based on zoom and natural size
+            flowchartImage.onload = function() {
+                const w = flowchartImage.naturalWidth * zoom;
+                const h = flowchartImage.naturalHeight * zoom;
+                flowchartImage.style.width = w + 'px';
+                flowchartImage.style.height = h + 'px';
+                // After resizing, restore or center scroll
+                const scrollDiv = document.querySelector('.flowchart-scroll');
+                if (!scrollDiv) return;
+                if (prevImageWidth === w && prevImageHeight === h) {
+                    restoreFlowchartScroll();
+                } else {
+                    centerFlowchartScroll();
+                }
+                prevImageWidth = w;
+                prevImageHeight = h;
+            };
+            // If already loaded, trigger onload manually
+            if (flowchartImage.complete && flowchartImage.naturalWidth) {
+                flowchartImage.onload();
+            }
             zoomSlider.value = Math.round(zoom * 100);
+        }
+
+        // Helper functions for scroll behavior
+        function centerFlowchartScroll() {
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            const img = flowchartImage;
+            if (!scrollDiv || !img) return;
+            scrollDiv.scrollLeft = Math.max(0, (img.width - scrollDiv.clientWidth) / 2);
+            scrollDiv.scrollTop = Math.max(0, (img.height - scrollDiv.clientHeight) / 2);
+        }
+
+        function restoreFlowchartScroll() {
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            if (!scrollDiv) return;
+            if (typeof prevScrollLeft === 'number' && typeof prevScrollTop === 'number') {
+                scrollDiv.scrollLeft = prevScrollLeft;
+                scrollDiv.scrollTop = prevScrollTop;
+            } else {
+                centerFlowchartScroll();
+            }
         }
 
         zoomSlider.oninput = (e) => {
