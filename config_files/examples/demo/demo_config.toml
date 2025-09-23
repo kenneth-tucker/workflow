@@ -43,7 +43,7 @@ Enter 7 to quit
 
 > """
 enter = "int"
-to = "menu_option"
+to = "_menu_option"
 
 
 [part.decide_option]
@@ -59,13 +59,13 @@ option_7 = "quit"
 try_again = "menu"
 [part.decide_option.config_values]
 statements = [
-    "option_1 if {menu_option} == 1",
-    "option_2 if {menu_option} == 2",
-    "option_3 if {menu_option} == 3",
-    "option_4 if {menu_option} == 4",
-    "option_5 if {menu_option} == 5",
-    "option_6 if {menu_option} == 6",
-    "option_7 if {menu_option} == 7",
+    "option_1 if {_menu_option} == 1",
+    "option_2 if {_menu_option} == 2",
+    "option_3 if {_menu_option} == 3",
+    "option_4 if {_menu_option} == 4",
+    "option_5 if {_menu_option} == 5",
+    "option_6 if {_menu_option} == 6",
+    "option_7 if {_menu_option} == 7",
     "else try_again"
 ]
 
