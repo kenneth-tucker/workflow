@@ -32,7 +32,6 @@ part_types = {
         type=StandardFlow,
         description="Run parts in a sequence"
     ),
-    # TODO add flow.parallel
 
     # Step types
     "step.dump": PartTypeInfo(
