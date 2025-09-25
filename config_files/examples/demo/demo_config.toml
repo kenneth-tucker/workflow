@@ -48,25 +48,15 @@ to = "_menu_option"
 
 [part.decide_option]
 type_name = "decision.conditional"
-[part.decide_option.next_part]
-option_1 = "name_change"
-option_2 = "dump"
-option_3 = "my_calculator"
-option_4 = "load_prompt"
-option_5 = "change_hidden_message"
-# option_6 assumed None since absent   
-option_7 = "quit"
-try_again = "menu"
 [part.decide_option.config_values]
 statements = [
-    "option_1 if {_menu_option} == 1",
-    "option_2 if {_menu_option} == 2",
-    "option_3 if {_menu_option} == 3",
-    "option_4 if {_menu_option} == 4",
-    "option_5 if {_menu_option} == 5",
-    "option_6 if {_menu_option} == 6",
-    "option_7 if {_menu_option} == 7",
-    "else try_again"
+    "name_change if {menu_option} == 1",
+    "dump if {menu_option} == 2",
+    "my_calculator if {menu_option} == 3",
+    "load_prompt if {menu_option} == 4",
+    "None if {menu_option} == 5",
+    "quit if {menu_option} == 6",
+    "else menu"
 ]
 
 

@@ -1,7 +1,6 @@
 from lib.utils.part_utils import PartTypeInfo
 from part_types.decision.conditional import ConditionalDecision
 from part_types.flow.load import LoadFlow
-from part_types.flow.manual import ManualFlow
 from part_types.flow.standard import StandardFlow
 from part_types.step.dump import DumpStep
 from part_types.step.expression import ExpressionStep
@@ -23,10 +22,6 @@ part_types = {
     "flow.load": PartTypeInfo(
         type=LoadFlow,
         description="Run parts from another config file"
-    ),
-    "flow.manual": PartTypeInfo(
-        type=ManualFlow,
-        description="Let the researcher choose the first part to run"
     ),
     "flow.standard": PartTypeInfo(
         type=StandardFlow,

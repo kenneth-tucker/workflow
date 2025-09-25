@@ -206,11 +206,16 @@ class ExperimentManager:
                     )
                 )
             elif isinstance(current_part, Decision):
-                route_name = current_part.decide_route()
+                route = current_part.decide_route()
+                route_name = route.route_name
+                if route_name == "None":
+                    route_name = None
                 if route_name is None or route_name in COMMAND_NAMES:
                     next_part_short_name = route_name
                 else:
                     next_part_short_name = current_part._context.config.next_part.get(route_name)
+                    if next_part_short_name is None and route.can_use_part_name:
+                        next_part_short_name = route_name
                 self.new_trace.record(
                     DecisionEntry(
                         datetime.now(),
@@ -220,7 +225,10 @@ class ExperimentManager:
                     )
                 )
             elif isinstance(current_part, Flow):
-                next_part_short_name = current_part.begin_flow()
+                route = current_part.begin_flow()
+                if route.start_here == "None":
+                    route.start_here = None
+                next_part_short_name = route.start_here
                 # Keep track of what level we're in
                 self.flow_stack.append(current_part_full_name)
                 self.new_trace.record(

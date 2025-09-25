@@ -1,6 +1,6 @@
 import os
 from typing import override
-from lib.utils.part_utils import PartConfig, PartTypeInfo
+from lib.utils.part_utils import BeginFlowRoute, DecisionRoute, PartConfig
 from lib.utils.exceptions import ConfigError
 from lib.utils.part_utils import PartContext
 
@@ -208,8 +208,6 @@ class Step(_Part):
 
     def run_step(self) -> None:
         """
-        Run the step's procedure.
-
         You MUST implement this in your subclass. ExperimentManager
         calls this to run your step's procedure. It might be run
         multiple times during the experiment so be sure to reset
@@ -276,16 +274,10 @@ class Decision(_Part):
     def __init__(self, context: PartContext):
         super().__init__(context)
 
-    def decide_route(self) -> str | None:
+    def decide_route(self) -> DecisionRoute:
         """
-        Decide which route to take next in the experiment.
-
         You MUST implement this in your subclass. ExperimentManager
-        calls this to decide which route to take. You need to return
-        the selected route name (not the part name), "done" to leave
-        the current flow (ends the experiment if it is in the outermost flow),
-        "quit" to end the entire experiment, or None if you could not decide
-        and need the researcher to manually decide what's next.
+        calls this to decide which route to take in the experiment.
         """
         raise NotImplementedError("Must implement the decide_route method in your subclass")
 
@@ -297,24 +289,16 @@ class Flow(_Part):
     def __init__(self, context: PartContext):
         super().__init__(context)
 
-    def begin_flow(self) -> str | None:
+    def begin_flow(self) -> BeginFlowRoute:
         """
-        Setup your flow's parts and return the (short) name of the
-        first part of your flow for the ExperimentManager to run.
-
         You MUST implement this in your subclass. ExperimentManager
         calls this when it enters your flow. You need to setup your flow's
-        parts and return the (short) name of the first part of your flow
-        for the ExperimentManager to run, or "done" to leave the flow
-        right away or "quit" to end the entire experiment or None to
-        have the researcher decide what to do first in the flow.
+        parts and tell the manager which of your parts to run first.
         """
         raise NotImplementedError("Must implement the begin_flow method in your subclass")
 
     def end_flow(self) -> None:
         """
-        Cleanup your flow before exiting it.
-
         You MUST implement this in your subclass. ExperimentManager
         calls this when it exits your flow. You need to perform any
         necessary cleanup here.
