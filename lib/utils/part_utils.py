@@ -59,3 +59,37 @@ class PartContext:
     ):
         self.manager = manager
         self.config = config
+
+class DecisionRoute:
+    """
+    The route for the experiment manager to take when a decision is made.
+
+    route_name is the left hand side of the next_part mapping for the
+    selected route, a command like "done" or "quit", or None/"None" if the
+    researcher needs to choose.
+
+    can_use_part_name indicates if a route name can refer to part names
+    directly if no mapping is found in the current part's next_part config.
+    """
+    def __init__(
+        self,
+        route_name: str | None,
+        can_use_part_name: bool = False,
+    ):
+        self.route_name = route_name
+        self.can_use_part_name = can_use_part_name
+
+class BeginFlowRoute:
+    """
+    The route for the experiment manager to take when entering a flow.
+
+    start_here is the short name of the part to start at, a command
+    like "done" or "quit", or None/"None" if the researcher needs to choose.
+    It is typically the value of the "start_here" config option but
+    can be something else if needed.
+    """
+    def __init__(
+        self,
+        start_here: str | None,
+    ):
+        self.start_here = start_here

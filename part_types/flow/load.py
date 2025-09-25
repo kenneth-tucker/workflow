@@ -4,6 +4,7 @@ from typing import override
 from lib.experiment_parts import Flow
 from lib.utils.exceptions import ConfigError
 from lib.utils.parse_config import extract_part_configs
+from lib.utils.part_utils import BeginFlowRoute
 
 class LoadFlow(Flow):
     """
@@ -23,14 +24,14 @@ class LoadFlow(Flow):
             self._load_parts_from_file(path)
 
     @override
-    def begin_flow(self) -> str | None:
+    def begin_flow(self) -> BeginFlowRoute:
         path: str | None = self.get_input(
             "path", allow=[str], optional=True
         )
         if path:
             self._load_parts_from_file(path)
         # If a path input is specified then try to load that
-        return self.initial_part_name
+        return BeginFlowRoute(self.initial_part_name)
 
     @override
     def end_flow(self) -> None:
