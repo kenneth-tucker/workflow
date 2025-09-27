@@ -1,5 +1,5 @@
 [part]
-start_here = "a"
+first_part = "a"
 
 [part.a]
 type_name = "step.terminal"

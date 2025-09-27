@@ -223,9 +223,9 @@ class ExperimentManager:
                 )
             elif isinstance(current_part, Flow):
                 route = current_part.begin_flow()
-                if route.start_here == "None":
-                    route.start_here = None
-                next_part_short_name = route.start_here
+                if route.first_part == "None":
+                    route.first_part = None
+                next_part_short_name = route.first_part
                 # Keep track of what level we're in
                 self.flow_stack.append(current_part_full_name)
                 self.new_trace.record(

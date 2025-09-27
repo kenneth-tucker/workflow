@@ -16,7 +16,7 @@ some_list = ["red", "yellow", "blue"]
 
 
 [part]
-start_here = "greeting"
+first_part = "greeting"
 
 
 [part.greeting]

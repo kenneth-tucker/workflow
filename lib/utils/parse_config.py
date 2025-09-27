@@ -48,7 +48,7 @@ def extract_part_configs(
     """
     parts = {}
     for top_level_name, top_level_part in part_table.items():
-        if top_level_name == "start_here":
+        if top_level_name == "first_part":
             continue
         name_path = top_level_name if not parent_full_name\
             else f"{parent_full_name}.{top_level_name}"
@@ -81,7 +81,7 @@ def _extract_part_configs_recursive(
     reserved_keys = {
         "type_name",
         "next_part",
-        "start_here",
+        "first_part",
         "config_values",
         "input_names",
         "output_names"
@@ -103,7 +103,7 @@ def _extract_part_configs_recursive(
         raw=raw_table,
         type_name=raw_table.get("type_name"),
         next_part=next_part,
-        start_here=raw_table.get("start_here", ""),
+        first_part=raw_table.get("first_part", ""),
         config_values=raw_table.get("config_values", {}),
         input_names=raw_table.get("input_names", {}),
         output_names=raw_table.get("output_names", {}),
