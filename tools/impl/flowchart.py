@@ -83,12 +83,28 @@ class FlowChart:
 
         # Next, add next_part edges only if not in path_edges_to_highlight
         # We want the next_part edges to be less prominent than the path edges
+        # Note: we also check the 'statements' config for decision parts without
+        # a next_part config, as those statements also define possible next parts
+        # in a shorthand way.
         for part_full_name, part_model in self.experiment_model.experiment_parts.items():
             if self._is_child(part_full_name, flow_full_name):
                 next_parts_full_names = []
                 next_part_raw = part_model.raw_config.get("next_part")
                 if next_part_raw is None:
-                    pass
+                    if part_model.part_category == "decision":
+                        statements = part_model.raw_config.get("config_values", {}).get("statements")
+                        if isinstance(statements, list):
+                            for statement in statements:
+                                if isinstance(statement, str):
+                                    if " if " in statement:
+                                        route_name = statement.split(" if ")[0].strip()
+                                    elif "else" in statement:
+                                        route_name = statement.split("else")[1].strip()
+                                    else:
+                                        route_name = statement.strip()
+                                    next_parts_full_names.append(
+                                        self._to_full_name(route_name, flow_full_name)
+                                    )
                 elif isinstance(next_part_raw, str):
                     next_parts_full_names.append(
                         self._to_full_name(next_part_raw, flow_full_name)
