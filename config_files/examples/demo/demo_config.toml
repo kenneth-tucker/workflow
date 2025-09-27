@@ -17,7 +17,7 @@ _hidden_message = "The cake is a lie"
 
 
 [part]
-start_here = "greeting"
+first_part = "greeting"
 
 
 [part.greeting]

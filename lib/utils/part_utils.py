@@ -24,7 +24,7 @@ class PartConfig:
         raw: dict,
         type_name: str,
         next_part: dict[str, str],
-        start_here: str,
+        first_part: str,
         config_values: dict[str, object],
         input_names: dict[str, str],
         output_names: dict[str, str],
@@ -40,7 +40,7 @@ class PartConfig:
         # The short name(s) of the next part(s) to go to after this part
         self.next_part = next_part
         # The short name of the part to start at when entering a flow part
-        self.start_here = start_here
+        self.first_part = first_part
         # The config values for this part
         self.config_values = config_values
         # The input name to experiment data name mappings for this part
@@ -83,13 +83,13 @@ class BeginFlowRoute:
     """
     The route for the experiment manager to take when entering a flow.
 
-    start_here is the short name of the part to start at, a command
+    first_part is the short name of the part to start at, a command
     like "done" or "quit", or None/"None" if the researcher needs to choose.
-    It is typically the value of the "start_here" config option but
+    It is typically the value of the "first_part" config option but
     can be something else if needed.
     """
     def __init__(
         self,
-        start_here: str | None,
+        first_part: str | None,
     ):
-        self.start_here = start_here
+        self.first_part = first_part

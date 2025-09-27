@@ -312,12 +312,12 @@ class Flow(_Part):
     # We use short names for these helpers since a flow should
     # only know about and be managing its own parts.
 
-    def get_start_here(self) -> str | None:
+    def get_first_part(self) -> str | None:
         """
         Get the short name of the part to start with when this flow is entered,
         or None if not configured.
         """
-        return self._context.config.start_here
+        return self._context.config.first_part
 
     def list_part_names(self) -> list[str]:
         """

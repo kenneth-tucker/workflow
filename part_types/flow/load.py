@@ -63,7 +63,7 @@ class LoadFlow(Flow):
                 raise ConfigError(
                     f"No part table found in '{absolute_path}'"
                 )
-            self.initial_part_name = part_table.get("start_here", None)
+            self.initial_part_name = part_table.get("first_part", None)
             part_configs = extract_part_configs(
                 absolute_path,
                 part_table,

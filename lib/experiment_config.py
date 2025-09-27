@@ -56,7 +56,7 @@ class ExperimentConfig:
         self.part_table = self.raw_input.get("part")
         if not self.part_table:
             raise ConfigError("Missing part table in config")
-        self.initial_part_name = self.part_table.get("start_here", None)
+        self.initial_part_name = self.part_table.get("first_part", None)
         self.part_configs = extract_part_configs(self.file_path, self.part_table, "")
         if not self.part_configs:
             raise ConfigError("No parts found in config")
