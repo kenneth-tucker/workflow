@@ -1,0 +1,54 @@
+[part]
+first_part = "enter_first_number"
+
+
+[part.enter_first_number]
+type_name = "step.terminal"
+next_part = "enter_second_number"
+[part.enter_first_number.config_values]
+prompt = """
+
+Enter first number
+
+> """
+enter = "float"
+to = "first_number"
+
+
+[part.enter_second_number]
+type_name = "step.terminal"
+next_part = "calculate"
+[part.enter_second_number.config_values]
+prompt = """
+
+Enter second number
+
+> """
+enter = "float"
+to = "second_number"
+
+
+[part.calculate]
+type_name = "step.expression"
+next_part = "show_result"
+[part.calculate.config_values]
+statements = [
+    "result_add = {first_number} + {second_number}",
+    "result_sub = {first_number} - {second_number}",
+    "result_mul = {first_number} * {second_number}",
+    "result_div = {first_number} / {second_number}",
+]
+
+
+[part.show_result]
+type_name = "step.terminal"
+next_part = "done"
+[part.show_result.config_values]
+prompt = """
+
+{first_number} + {second_number} -> {result_add}
+{first_number} - {second_number} -> {result_sub}
+{first_number} * {second_number} -> {result_mul}
+{first_number} / {second_number} -> {result_div}
+
+"""

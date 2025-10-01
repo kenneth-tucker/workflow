@@ -1,0 +1,98 @@
+# An example config file, demonstrating the TOML syntax
+# for defining an experiment to be run by Workflow.
+#
+# See https://toml.io/en/ for more information.
+
+
+[experiment]
+name = "my_demo_experiment"
+# Save output files to workflow/my_results
+out_dir = "../../../my_results/examples"
+# part_types_py = "optional/path/to/part/types/py/file"
+[experiment.initial_values]
+researcher = "Bob"
+some_number = 42
+some_list = ["red", "yellow", "blue"]
+
+
+[part]
+first_part = "greeting"
+
+
+[part.greeting]
+type_name = "step.terminal"
+next_part = "menu"
+[part.greeting.config_values]
+prompt = "Hello {researcher}!"
+
+
+[part.menu]
+type_name = "step.terminal"
+next_part = "decide_option"
+[part.menu.config_values]
+prompt = """
+
+Enter 1 to change your name
+Enter 2 to see the experiment data
+Enter 3 to use a calculator
+Enter 4 to load in a config
+Enter 5 to enter manual mode
+Enter 6 to quit
+
+> """
+enter = "int"
+to = "menu_option"
+
+
+[part.decide_option]
+type_name = "decision.conditional"
+[part.decide_option.config_values]
+statements = [
+    "name_change if {menu_option} == 1",
+    "dump if {menu_option} == 2",
+    "my_calculator if {menu_option} == 3",
+    "load_prompt if {menu_option} == 4",
+    "None if {menu_option} == 5",
+    "quit if {menu_option} == 6",
+    "else menu"
+]
+
+
+[part.name_change]
+type_name = "step.terminal"
+next_part = "greeting"
+[part.name_change.config_values]
+prompt = "Enter your new name: "
+enter = "str"
+to = "researcher"
+
+
+[part.dump]
+type_name = "step.dump"
+next_part = "menu"
+
+
+[part.my_calculator]
+type_name = "flow.load"
+next_part = "menu"
+[part.my_calculator.config_values]
+path = "helpers/calculator.toml"
+
+
+[part.load_prompt]
+type_name = "step.terminal"
+next_part = "my_dynamically_loaded_flow"
+[part.load_prompt.config_values]
+prompt = """
+Enter a config file path, relative or absolute
+(e.g. 'helpers/abc.toml' or 'helpers/xyz.toml')
+> """
+enter = "str"
+to = "flow_config_path"
+
+
+[part.my_dynamically_loaded_flow]
+type_name = "flow.load"
+next_part = "menu"
+[part.my_dynamically_loaded_flow.input_names]
+path = "flow_config_path"

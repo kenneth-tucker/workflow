@@ -1,0 +1,49 @@
+
+from lib.experiment_parts import Step
+from lib.utils.exceptions import ConfigError
+from lib.utils.parse_config import execute_statement_with_data_values, extract_data_names
+
+class ExpressionStep(Step):
+    """
+    A step part that evaluates expressions and stores the results.
+    Expressions are of the form:
+        <data_name> = <expression>
+        where <expression> can use experiment data names as {name}.
+    """
+    def __init__(self, context):
+        super().__init__(context)
+        self.statements: list[str] = \
+            self.get_config("statements", allow=[list])
+        # Check each statement is a string
+        for statement in self.statements:
+            if not isinstance(statement, str):
+                raise ConfigError(
+                    f"Invalid statement '{statement}' in part '{self.get_full_name()}': "
+                    "must be a string"
+                )
+
+    def run_step(self) -> None:
+        for statement in self.statements:
+            parts = statement.split("=")
+            if len(parts) != 2:
+                raise ConfigError(
+                    f"Invalid statement '{statement}' in part '{self.get_full_name()}': "
+                    "must be of the form '<data_name> = <expression>'"
+                )
+            data_name = parts[0].strip()
+            expression = parts[1].strip()
+            try:
+                # Evaluate the expression using the experiment data as variables
+                data_names = extract_data_names(expression)
+                data_values = {name: self.get_input(name, can_use_global=True) for name in data_names}
+                result = execute_statement_with_data_values(
+                    expression,
+                    data_values
+                )
+                # Store the result in the experiment data
+                self.set_output(data_name, result, can_use_global=True)
+            except Exception as e:
+                raise ConfigError(
+                    f"Could not evaluate expression '{expression}' in part "
+                    f"'{self.get_full_name()}': {e}"
+                )

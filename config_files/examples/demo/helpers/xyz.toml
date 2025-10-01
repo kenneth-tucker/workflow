@@ -1,0 +1,20 @@
+[part]
+first_part = "x"
+
+[part.x]
+type_name = "step.terminal"
+next_part = "y"
+[part.x.config_values]
+prompt = "x"
+
+[part.y]
+type_name = "step.terminal"
+next_part = "z"
+[part.y.config_values]
+prompt = "y"
+
+[part.z]
+type_name = "step.terminal"
+next_part = "done"
+[part.z.config_values]
+prompt = "z"
