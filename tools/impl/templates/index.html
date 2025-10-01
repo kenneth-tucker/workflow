@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Experiment Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .top-bar {
+            background: #2d3e50;
+            color: #fff;
+            padding: 16px 24px;
+            font-size: 1.4em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+        .left-pane {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            min-width: 0;
+        }
+        .flowchart-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            min-width: 0;
+            padding: 24px;
+        }
+        .flowchart-scroll {
+            flex: 1;
+            overflow: auto;
+            background: #fafafa;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            min-width: 0;
+            min-height: 0;
+        }
+        .flowchart-image {
+            display: block;
+            max-width: none;
+            max-height: none;
+            transition: width 0.2s, height 0.2s;
+            position: relative;
+        }
+        .zoom-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .zoom-slider {
+            width: 140px;
+        }
+        .slide-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f0f4f8;
+            border-top: 1px solid #e0e0e0;
+            gap: 8px;
+        }
+        .slide-btn {
+            background: #fff;
+            border: 1px solid #b0b0b0;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 4px;
+            transition: background 0.2s;
+        }
+        .slide-btn.selected {
+            background: #2d3e50;
+            color: #fff;
+            border-color: #2d3e50;
+        }
+        .slide-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 12px;
+        }
+        .right-pane {
+            flex: 1;
+            background: #f9fafb;
+            padding: 24px;
+            overflow-y: auto;
+            min-width: 260px;
+        }
+        .data-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .data-list li {
+            background: #fff;
+            margin-bottom: 10px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="top-bar" id="topBar">
+            experiment_name — run #run_number [state]
+        </div>
+        <div class="main-content">
+            <div class="left-pane">
+                <div class="flowchart-container">
+                    <div class="zoom-controls">
+                        <label for="zoomSlider" style="font-size:0.98em;">Zoom:</label>
+                        <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="500" value="100" step="10">
+                    </div>
+                    <div class="flowchart-scroll">
+                        <img id="flowchartImage" class="flowchart-image" src="" alt="Flowchart">
+                    </div>
+                </div>
+                <div id="eventBar" style="background:#e8eaf6;padding:8px 16px;font-size:1.08em;border-bottom:1px solid #d0d0d0; overflow-x:auto; white-space:nowrap;"></div>
+                <div class="slide-row">
+                    <div class="slide-controls">
+                        <button id="prevBtn" class="slide-btn">&#9664;&#9664;</button>
+                        <button id="playBtn" class="slide-btn">&#9654;</button>
+                        <button id="nextBtn" class="slide-btn">&#9654;&#9654;</button>
+                    </div>
+                    <div id="slideThumbnails" style="display: flex; gap: 4px; overflow-x: auto; max-width: 100%; scroll-behavior: smooth;"></div>
+                </div>
+            </div>
+            <div class="right-pane">
+                <h3>Experiment Data</h3>
+                <ul class="data-list" id="dataList">
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script>
+        // The experiment data will be fetched periodically
+        let experiment = {name: '', run: '', snapshots: [{label: 'N/A', flowchart: '', data: {}}]};
+
+        async function fetchExperimentData() {
+            try {
+                const res = await fetch('/experiment_data');
+                if (!res.ok) throw new Error('Failed to fetch');
+                let new_experiment = await res.json();
+                if (new_experiment.snapshots.length === experiment.snapshots.length) {
+                    return; // No change
+                }
+                // If we were playing and reached the end, stay at the end
+                // Note: this ensures the UI is synced with the running experiment
+                if (playing && currentSlide === experiment.snapshots.length - 1) {
+                    currentSlide = new_experiment.snapshots.length - 1;
+                }
+                experiment = new_experiment;
+                // Ensure there's at least one snapshot
+                if (experiment.snapshots.length === 0) {
+                    experiment.snapshots.push({label: 'N/A', flowchart: '', data: {}});
+                }
+                // Clamp currentSlide if needed
+                if (currentSlide >= experiment.snapshots.length) {
+                    currentSlide = experiment.snapshots.length - 1;
+                }
+                if (currentSlide < 0) currentSlide = 0;
+                updateUI();
+            } catch (e) {
+            // Optionally handle error
+            }
+        }
+
+        // Fetch initially and then every half second
+        fetchExperimentData();
+        setInterval(fetchExperimentData, 500);
+
+        // Track slide and playback state
+        let currentSlide = 0;
+        let playing = false;
+        let playInterval = null;
+        // Track positioning for the flowchart image
+        let zoom = 1.0;
+        let prevImageWidth = null;
+        let prevImageHeight = null;
+        let prevScrollLeft = null;
+        let prevScrollTop = null;
+        // Track open/closed state of hidden data
+        let hiddenDetailsOpen = false;
+
+        // DOM refs
+        const topBar = document.getElementById('topBar');
+        const flowchartImage = document.getElementById('flowchartImage');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const slideThumbnails = document.getElementById('slideThumbnails');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const playBtn = document.getElementById('playBtn');
+        const dataList = document.getElementById('dataList');
+
+        // Render functions
+        function renderTopBar() {
+            let content = '';
+            if (experiment.name && experiment.run) {
+                content += `${experiment.name} — run #${experiment.run} `;
+            }
+            if (experiment.state) {
+                content += `[${experiment.state}]`;
+                if(experiment.state.toLowerCase() === 'not started') {
+                    topBar.style.background = '#2d3e50';
+                }
+                else if(experiment.state.toLowerCase() === 'running') {
+                    topBar.style.background = '#2196f3';
+                }
+                else if(experiment.state.toLowerCase() === 'waiting for researcher') {
+                    topBar.style.background = '#8b4500';
+                }
+                else if(experiment.state.toLowerCase() === 'completed') {
+                    topBar.style.background = '#4caf50';
+                }
+                else {
+                    topBar.style.background = '#2d3e50';
+                }
+            }
+            if (!content) {
+                content = '[waiting for data]';
+            }
+            topBar.textContent = content;
+        }
+
+        function renderFlowchart() {
+            // Save scroll position before changing image
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            if (scrollDiv) {
+                prevScrollLeft = scrollDiv.scrollLeft;
+                prevScrollTop = scrollDiv.scrollTop;
+            }
+            flowchartImage.src = experiment.snapshots[currentSlide].flowchart;
+            flowchartImage.alt = experiment.snapshots[currentSlide].label;
+            // Set width/height based on zoom and natural size
+            flowchartImage.onload = function() {
+                const w = flowchartImage.naturalWidth * zoom;
+                const h = flowchartImage.naturalHeight * zoom;
+                flowchartImage.style.width = w + 'px';
+                flowchartImage.style.height = h + 'px';
+                // After resizing, restore or center scroll
+                const scrollDiv = document.querySelector('.flowchart-scroll');
+                if (!scrollDiv) return;
+                if (prevImageWidth === w && prevImageHeight === h) {
+                    restoreFlowchartScroll();
+                } else {
+                    centerFlowchartScroll();
+                }
+                prevImageWidth = w;
+                prevImageHeight = h;
+            };
+            // If already loaded, trigger onload manually
+            if (flowchartImage.complete && flowchartImage.naturalWidth) {
+                flowchartImage.onload();
+            }
+            zoomSlider.value = Math.round(zoom * 100);
+        }
+
+        // Helper functions for scroll behavior
+        function centerFlowchartScroll() {
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            const img = flowchartImage;
+            if (!scrollDiv || !img) return;
+            scrollDiv.scrollLeft = Math.max(0, (img.width - scrollDiv.clientWidth) / 2);
+            scrollDiv.scrollTop = Math.max(0, (img.height - scrollDiv.clientHeight) / 2);
+        }
+
+        function restoreFlowchartScroll() {
+            const scrollDiv = document.querySelector('.flowchart-scroll');
+            if (!scrollDiv) return;
+            if (typeof prevScrollLeft === 'number' && typeof prevScrollTop === 'number') {
+                scrollDiv.scrollLeft = prevScrollLeft;
+                scrollDiv.scrollTop = prevScrollTop;
+            } else {
+                centerFlowchartScroll();
+            }
+        }
+
+        zoomSlider.oninput = (e) => {
+            zoom = parseInt(zoomSlider.value, 10) / 100;
+            renderFlowchart();
+        };
+
+        function renderSlides() {
+            slideThumbnails.innerHTML = '';
+            let selectedBtn = null;
+            experiment.snapshots.forEach((snapshot, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'slide-btn' + (idx === currentSlide ? ' selected' : '');
+                btn.textContent = snapshot.label;
+                btn.onclick = () => {
+                    stopPlayback();
+                    currentSlide = idx;
+                    updateUI();
+                };
+                if (idx === currentSlide) selectedBtn = btn;
+                slideThumbnails.appendChild(btn);
+            });
+            // Auto-scroll to selected slide
+            if (selectedBtn) {
+                selectedBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+            }
+        }
+
+        function isHiddenKey(key) {
+            // Returns true if any part of the key path starts with _
+            return key.split('.').some(k => k.startsWith('_'));
+        }
+
+        function flattenData(obj, prefix = '') {
+            // Flattens nested objects into dot notation keys
+            let result = {};
+            for (const [k, v] of Object.entries(obj)) {
+                const fullKey = prefix ? `${prefix}.${k}` : k;
+                if (v && typeof v === 'object' && !Array.isArray(v)) {
+                    Object.assign(result, flattenData(v, fullKey));
+                } else {
+                    result[fullKey] = v;
+                }
+            }
+            return result;
+        }
+
+        function renderDataList() {
+            dataList.innerHTML = '';
+            const currData = flattenData(experiment.snapshots[currentSlide].data);
+            let prevData = null;
+            if (currentSlide > 0) {
+                prevData = flattenData(experiment.snapshots[currentSlide - 1].data);
+            }
+            // Separate visible and hidden keys
+            const visible = [];
+            const hidden = [];
+            for (const key of Object.keys(currData)) {
+                if (isHiddenKey(key)) {
+                    hidden.push(key);
+                } else {
+                    visible.push(key);
+                }
+            }
+            visible.sort();
+            hidden.sort();
+
+            // Render visible data
+            for (const key of visible) {
+                const value = currData[key];
+                const li = document.createElement('li');
+                li.textContent = `${key}: ${value}`;
+                if (prevData) {
+                    if (prevData[key] === undefined) {
+                        li.style.background = '#ffe5c2';
+                    } else {
+                        const prevVal = prevData[key];
+                        let isChanged;
+                        if (typeof value === 'object' && value !== null) {
+                            isChanged = JSON.stringify(prevVal) !== JSON.stringify(value);
+                        } else {
+                            isChanged = prevVal !== value;
+                        }
+                        if (isChanged) {
+                            li.style.background = '#ffe5c2';
+                        }
+                    }
+                }
+                dataList.appendChild(li);
+            }
+
+            // Render hidden data in a collapsible section
+            if (hidden.length > 0) {
+                const details = document.createElement('details');
+                details.style.marginTop = '18px';
+                const summary = document.createElement('summary');
+                summary.textContent = `Hidden (${hidden.length} Item${hidden.length === 1 ? '' : 's'})`;
+                summary.style.fontWeight = 'bold';
+                details.appendChild(summary);
+                let first = true;
+                for (const key of hidden) {
+                    const value = currData[key];
+                    const li = document.createElement('li');
+                    li.textContent = `${key}: ${value}`;
+                    if (first) {
+                        li.style.marginTop = '8px';
+                        first = false;
+                    }
+                    if (prevData) {
+                        if (prevData[key] === undefined) {
+                            li.style.background = '#ffe5c2';
+                        } else {
+                            const prevVal = prevData[key];
+                            let isChanged;
+                            if (typeof value === 'object' && value !== null) {
+                                isChanged = JSON.stringify(prevVal) !== JSON.stringify(value);
+                            } else {
+                                isChanged = prevVal !== value;
+                            }
+                            if (isChanged) {
+                                li.style.background = '#ffe5c2';
+                            }
+                        }
+                    }
+                    details.appendChild(li);
+                }
+                // Restore open/closed state globally
+                details.open = hiddenDetailsOpen;
+                // Update state on toggle
+                details.addEventListener('toggle', () => {
+                    hiddenDetailsOpen = details.open;
+                });
+                dataList.appendChild(details);
+            }
+        }
+
+        function renderEventBar() {
+            const eventBar = document.getElementById('eventBar');
+            const snapshot = experiment.snapshots[currentSlide];
+            // Format timestamp to human readable
+            const date = new Date(snapshot.timestamp);
+            const readable = date.toLocaleString();
+            eventBar.textContent = `${readable} | ${snapshot.event_info || 'N/A'}`;
+        }
+
+        function updateUI() {
+            renderTopBar();
+            renderFlowchart();
+            renderEventBar();
+            renderSlides();
+            renderDataList();
+        }
+
+        // Slide controls
+        prevBtn.onclick = () => {
+            stopPlayback();
+            currentSlide = (currentSlide - 1 + experiment.snapshots.length) % experiment.snapshots.length;
+            updateUI();
+        };
+        nextBtn.onclick = () => {
+            stopPlayback();
+            currentSlide = (currentSlide + 1) % experiment.snapshots.length;
+            updateUI();
+        };
+        playBtn.onclick = () => {
+            if (playing) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        };
+
+        function startPlayback() {
+            playing = true;
+            playBtn.textContent = '❚❚';
+            playInterval = setInterval(() => {
+                if (currentSlide < experiment.snapshots.length - 1) {
+                    currentSlide++;
+                    updateUI();
+                }
+            }, 1000);
+        }
+
+        function stopPlayback() {
+            playing = false;
+            playBtn.textContent = '▶';
+            if (playInterval) clearInterval(playInterval);
+            playInterval = null;
+        }
+
+        // Initial render
+        updateUI();
+
+        // Start playback automatically
+        startPlayback();
+    </script>
+</body>
+</html>

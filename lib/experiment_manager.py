@@ -11,7 +11,7 @@ from lib.experiment_parts import _Part, Step, Decision, Flow
 from lib.experiment_trace import ExperimentTrace, PartPathPiece, \
     AtPartEntry, ExperimentBeginEntry, ExperimentEndEntry, ErrorEntry, \
     PartAddEntry, PartRemoveEntry, ResearcherDecisionEntry, StepEntry, \
-    DecisionEntry, FlowBeginEntry, FlowEndEntry
+    DecisionEntry, FlowBeginEntry, FlowEndEntry, CustomEntry
 
 class ExperimentMode(enum.Enum):
     """
@@ -40,9 +40,12 @@ class ExperimentManager:
     """
     def __init__(
         self,
-        config: ExperimentConfig
+        config: ExperimentConfig,
+        on_output_dir_built: Optional[callable] = None
     ):
         self.config = config
+        # A callback function that is called after the output directory is built
+        self.on_output_dir_built = on_output_dir_built
 
     def run(
         self,
@@ -157,17 +160,18 @@ class ExperimentManager:
         self.new_experiment_data = deepcopy(self.config.initial_values)
         self._build_output_dirs()
         self._construct_parts()
-        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started")
+        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} started", flush=True)
         self.new_trace.record(
             ExperimentBeginEntry(
                 datetime.now(),
                 self.config.experiment_name,
-                self.run_number
+                self.run_number,
+                self.experiment_data
             )
         )
 
     def _end_experiment_run(self) -> None:
-        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} completed")
+        print(f"Experiment '{self.config.experiment_name}' run {self.run_number} completed", flush=True)
         self.new_trace.record(
             ExperimentEndEntry(
                 datetime.now(),
@@ -197,7 +201,6 @@ class ExperimentManager:
                     StepEntry(
                         datetime.now(),
                         current_part_full_name,
-                        self.experiment_data,
                         self.new_experiment_data,
                         self.new_trace_part_data
                     )
@@ -243,7 +246,7 @@ class ExperimentManager:
             # Update the experiment data to the new data after a successful run
             self.experiment_data = deepcopy(self.new_experiment_data)
         except Exception as e:
-            print(f"Error while running part '{current_part_full_name}': {e}")
+            print(f"Error while running part '{current_part_full_name}': {e}", flush=True)
             self.new_trace.record(
                 ErrorEntry(
                     datetime.now(),
@@ -277,7 +280,7 @@ class ExperimentManager:
                     )
                 )
             except Exception as e:
-                print(f"Error ending flow '{flow_part_full_name}': {e}")
+                print(f"Error ending flow '{flow_part_full_name}': {e}", flush=True)
                 self.new_trace.record(
                     ErrorEntry(
                         datetime.now(),
@@ -341,6 +344,18 @@ class ExperimentManager:
         """
         return self.old_trace_part_data
 
+    def _insert_custom_trace_entry(self, event_type: str, event_data: dict | None) -> None:
+        """
+        Insert a custom trace entry into the experiment trace.
+        """
+        self.new_trace.record(
+            CustomEntry(
+                datetime.now(),
+                event_type,
+                event_data
+            )
+        )
+
     def _add_part(self, part_config: PartConfig) -> None:
         """
         Add a new part to the experiment.
@@ -355,7 +370,8 @@ class ExperimentManager:
                 PartAddEntry(
                     datetime.now(),
                     part_config.full_name,
-                    part_config.type_name,
+                    part_config.file_path,
+                    part_config.raw,
                     "step" if issubclass(part_type.type, Step) else
                     "decision" if issubclass(part_type.type, Decision) else
                     "flow" if issubclass(part_type.type, Flow) else
@@ -399,7 +415,7 @@ class ExperimentManager:
         Note: this method figures out the run number by looking at
         the existing runs in the output directory.
         """
-        print("Setting up output directories...")
+        print("Setting up output directories...", flush=True)
         out_dir_for_experiment = os.path.join(self.config.out_dir, self.config.experiment_name)
         os.makedirs(out_dir_for_experiment, exist_ok=True)
         existing_runs = [
@@ -411,14 +427,17 @@ class ExperimentManager:
             (int(d.split("_")[1]) for d in existing_runs), default=0
         ) + 1
         self.out_dir_for_run = os.path.join(out_dir_for_experiment, f"run_{self.run_number}")
-        print(f"Creating directory for experiment '{self.config.experiment_name}' run {self.run_number}: {self.out_dir_for_run}")
+        print(f"Creating directory for experiment '{self.config.experiment_name}' run {self.run_number}: {self.out_dir_for_run}", flush=True)
         os.makedirs(self.out_dir_for_run, exist_ok=False)
         # Copy the config file to the new directory
         shutil.copy(self.config.file_path, os.path.join(self.out_dir_for_run, "config.toml"))
         # Create the experiment trace file
         self.new_trace_file_path = os.path.join(self.out_dir_for_run, "trace.json")
-        print(f"Creating experiment trace file: {self.new_trace_file_path}")
+        print(f"Creating experiment trace file: {self.new_trace_file_path}", flush=True)
         self.new_trace = ExperimentTrace(output_file_path=self.new_trace_file_path)
+        # Call the callback function, if provided
+        if self.on_output_dir_built is not None:
+            self.on_output_dir_built(self.out_dir_for_run)
 
     def _convert_to_short_name(self, full_name: str | None) -> str | None:
         """
@@ -472,13 +491,13 @@ class ExperimentManager:
         """
         flow_full_name = self._get_current_flow_full_name()
         if not flow_full_name:
-            print(f"You are in the top-level flow of experiment '{self.config.experiment_name}', which has these parts:")
+            print(f"You are in the top-level flow of experiment '{self.config.experiment_name}', which has these parts:", flush=True)
         else:
-            print(f"You are in the '{flow_full_name}' flow, which has these parts:")
+            print(f"You are in the '{flow_full_name}' flow, which has these parts:", flush=True)
         short_names = self._get_flow_parts_short_names(flow_full_name)
         for short_name in short_names:
             full_name = self._convert_to_full_name(short_name)
-            print(f" - {short_name} : {self.experiment_parts[full_name]._context.config.type_name}")
+            print(f" - {short_name} : {self.experiment_parts[full_name]._context.config.type_name}", flush=True)
 
     def _get_next_from_researcher(self) -> str:
         """

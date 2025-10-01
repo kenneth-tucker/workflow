@@ -40,11 +40,13 @@ class ExperimentBeginEntry(TraceEntry):
         self,
         timestamp: datetime,
         experiment_name: str,
-        run_number: int
+        run_number: int,
+        experiment_data: dict[str, any]
     ):
         super().__init__(timestamp, "experiment_begin")
         self.experiment_name = experiment_name
         self.run_number = run_number
+        self.experiment_data = experiment_data
 
 class ExperimentEndEntry(TraceEntry):
     """
@@ -106,13 +108,11 @@ class StepEntry(TraceEntry):
         self,
         timestamp: datetime,
         step_name: str,
-        data_before: dict,
         data_after: dict,
         part_data: dict | None
     ):
         super().__init__(timestamp, "step")
         self.step_name = step_name
-        self.data_before = data_before
         self.data_after = data_after
         self.part_data = part_data
 
@@ -169,16 +169,18 @@ class PartAddEntry(TraceEntry):
     def __init__(
         self,
         timestamp: datetime,
-        part_full_name: str,
-        part_type_name: str,
+        full_name: str,
+        file_path: str,
+        raw_config: dict,
         part_category: str,
     ):
         allowed_categories = {"step", "decision", "flow"}
         if part_category not in allowed_categories:
             raise ValueError(f"part_category must be one of {allowed_categories}, got '{part_category}'")
         super().__init__(timestamp, "part_add")
-        self.part_full_name = part_full_name
-        self.part_type_name = part_type_name
+        self.full_name = full_name
+        self.file_path = file_path
+        self.raw_config = raw_config
         self.part_category = part_category
 
 class PartRemoveEntry(TraceEntry):
@@ -188,10 +190,25 @@ class PartRemoveEntry(TraceEntry):
     def __init__(
         self,
         timestamp: datetime,
-        part_full_name: str,
+        full_name: str,
     ):
         super().__init__(timestamp, "part_remove")
-        self.part_full_name = part_full_name
+        self.full_name = full_name
+
+class CustomEntry(TraceEntry):
+    """
+    Trace entry for custom events that part
+    implementations may want to log.
+    """
+    def __init__(
+        self,
+        timestamp: datetime,
+        event_type: str,
+        event_data: dict | None
+    ):
+        super().__init__(timestamp, "custom")
+        self.event_type = event_type
+        self.event_data = event_data
 
 class ExperimentTrace:
     """
@@ -228,13 +245,11 @@ class ExperimentTrace:
         """
         self.trace.append(entry)
         if self.output_trace_file:
-            if len(self.trace) > 1:
-                # Add a comma before the next entry
-                self.output_trace_file.write(',\n')
             # Serialize the entry as a dict
             entry_dict = entry.__dict__.copy()
             entry_dict["timestamp"] = entry.timestamp.isoformat()
             json.dump(entry_dict, self.output_trace_file)
+            self.output_trace_file.write(',\n')
             self.output_trace_file.flush()
 
     def get_part_path(self) -> list[PartPathPiece]:
@@ -247,10 +262,17 @@ class ExperimentTrace:
             if isinstance(entry, AtPartEntry):
                 # The entry after the AtPartEntry may have part_data, assuming
                 # it is a StepEntry, DecisionEntry, FlowBeginEntry, or FlowEndEntry
-                # and not something like ErrorEntry or ResearcherDecisionEntry
-                next_entry = self.trace[i + 1] if i + 1 < len(self.trace) else None
-                if isinstance(next_entry, (StepEntry, DecisionEntry, FlowBeginEntry, FlowEndEntry)):
-                    part_data = next_entry.part_data
+                # and not something like ErrorEntry or ResearcherDecisionEntry.
+                # We do need to skip over any CustomEntry entries that the part
+                # implementation may have logged.
+                j = i + 1
+                while True:
+                    part_entry = self.trace[j] if j < len(self.trace) else None
+                    if not isinstance(part_entry, CustomEntry):
+                        break
+                    j += 1
+                if isinstance(part_entry, (StepEntry, DecisionEntry, FlowBeginEntry, FlowEndEntry)):
+                    part_data = part_entry.part_data
                 else:
                     part_data = None
                 part_path.append(PartPathPiece(entry.part_name, part_data))
@@ -272,13 +294,17 @@ class ExperimentTrace:
         # Deserialize the raw trace entries
         self.parsed_input = []
         for entry in raw_trace:
+            if not entry:
+                # Skip empty entries (e.g. the last one)
+                continue
             timestamp = datetime.fromisoformat(entry["timestamp"])
             match entry.get("event"):
                 case "experiment_begin":
                     self.parsed_input.append(ExperimentBeginEntry(
                         timestamp=timestamp,
                         experiment_name=entry["experiment_name"],
-                        run_number=entry["run_number"]
+                        run_number=entry["run_number"],
+                        experiment_data=entry["experiment_data"]
                     ))
                 case "experiment_end":
                     self.parsed_input.append(ExperimentEndEntry(
@@ -306,7 +332,6 @@ class ExperimentTrace:
                     self.parsed_input.append(StepEntry(
                         timestamp=timestamp,
                         step_name=entry["step_name"],
-                        data_before=entry["data_before"],
                         data_after=entry["data_after"],
                         part_data=entry.get("part_data")
                     ))
@@ -333,14 +358,21 @@ class ExperimentTrace:
                 case "part_add":
                     self.parsed_input.append(PartAddEntry(
                         timestamp=timestamp,
-                        part_full_name=entry["part_full_name"],
-                        part_type_name=entry["part_type_name"],
+                        full_name=entry["full_name"],
+                        file_path=entry["file_path"],
+                        raw_config=entry["raw_config"],
                         part_category=entry["part_category"]
                     ))
                 case "part_remove":
                     self.parsed_input.append(PartRemoveEntry(
                         timestamp=timestamp,
-                        part_full_name=entry["part_full_name"]
+                        full_name=entry["full_name"]
+                    ))
+                case "custom":
+                    self.parsed_input.append(CustomEntry(
+                        timestamp=timestamp,
+                        event_type=entry["event_type"],
+                        event_data=entry["event_data"]
                     ))
                 case _:
                     raise ValueError(f"Unknown trace entry type: {entry.get('event')}")
@@ -369,7 +401,7 @@ class ExperimentTrace:
 
     def _finalize_output_trace(self):
         if self.output_trace_file:
-            self.output_trace_file.write(']}')
+            self.output_trace_file.write('{}]}\n')
             self.output_trace_file.flush()
 
     def __enter__(self):

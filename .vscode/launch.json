@@ -5,14 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Workflow Experiment",
+            "name": "Python: Workflow Experiment",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/workflow.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/config_files/examples/demo/demo_config.toml"
+                "${workspaceFolder}/config_files/examples/demo/demo_config.toml",
+                "--view"
             ]
-        },
+        }
     ]
 }

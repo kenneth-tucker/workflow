@@ -23,13 +23,13 @@ class ExperimentConfig:
     # Private helper methods
 
     def _load_config(self):
-        print(f"Loading experiment configuration from '{self.file_path}'...")
+        print(f"Loading experiment configuration from '{self.file_path}'...", flush=True)
         with open(self.file_path, "rb") as f:
             data = tomllib.load(f)
         self.raw_input = data
 
     def _parse_config(self):
-        print("Parsing experiment configuration...")
+        print("Parsing experiment configuration...", flush=True)
 
         # Get the top-level experiment information
         self.experiment_table = self.raw_input.get("experiment")
@@ -73,7 +73,7 @@ class ExperimentConfig:
                 script_dir_path, "../part_types/part_types.py"
             )
         )
-        print(f"Loading part types from '{self.part_types_py}'...")
+        print(f"Loading part types from '{self.part_types_py}'...", flush=True)
         module = import_module_from_path(
             "workflow.part_types.part_types", self.part_types_py
         )
@@ -83,7 +83,7 @@ class ExperimentConfig:
         """
         Validate the experiment configuration.
         """
-        print("Validating experiment configuration...")
+        print("Validating experiment configuration...", flush=True)
         for part_full_name, part_config in self.part_configs.items():
             if part_config.type_name not in self.part_types:
                 raise ConfigError(f"Unknown part type '{part_config.type_name}' for part '{part_full_name}'")
