@@ -36,7 +36,8 @@ def open_experiment_in_browser(run_dir: str):
     so that it does not interfere with the main experiment process,
     including clogging its stdout/stderr.
     """
-    subprocess.Popen([sys.executable, "-m", "tools.view_experiment", run_dir],
+    script_path = os.path.join(os.path.dirname(__file__), "tools", "view_experiment.py")
+    subprocess.Popen([sys.executable, script_path, run_dir],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def main():
