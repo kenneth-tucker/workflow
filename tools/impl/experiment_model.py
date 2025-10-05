@@ -56,6 +56,7 @@ class ExperimentModel:
         self.part_path: list[str] = []
         self.flow_stack: list[str] = []
         self.error_stack: list[str] = []
+        self.flow_first_parts: dict[str, str] = {}
     
     def on_trace_entry(self, trace_entry: dict):
         # Update the experiment model based on the trace entry
@@ -70,6 +71,16 @@ class ExperimentModel:
                 self.experiment_state = ExperimentState.COMPLETED
             case "at_part":
                 self.part_path.append(trace_entry["part_name"])
+                # If this is the first part in the experiment, record it
+                if len(self.part_path) == 1:
+                    self.flow_first_parts[""] = trace_entry["part_name"]
+                # If we had just entered a flow, record its first part
+                if self.flow_stack:
+                    flow_name = self.flow_stack[-1]
+                    last_part = self.part_path[-2] if len(self.part_path) >= 2 else ""
+                    if flow_name == last_part:
+                        # We are at the first part after flow_begin for this flow
+                        self.flow_first_parts[flow_name] = trace_entry["part_name"]
                 # The researcher needs to decide what to do next if
                 # part_name is not a valid part or, possibly, if quit
                 # is given during a retrace
