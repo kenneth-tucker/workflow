@@ -205,10 +205,11 @@ class FlowChart:
         end_node = f"{ending_name}_{flow_full_name}" if flow_full_name else ending_name
         path = self.experiment_model.part_path
         highlight_end = False
+        active_flow = self.experiment_model.flow_stack[-1] if self.experiment_model.flow_stack else ""
         # Highlight end node if path ends at this ending
         if path and path[-1] in ("done", "quit") and \
             ending_name == path[-1] and \
-            flow_full_name == self.experiment_model.flow_stack[-1]:
+            flow_full_name == active_flow:
             highlight_end = True
         node_fill = self.COLOR_NODE_END_ACTIVE if highlight_end else self.COLOR_NODE_END_DEFAULT
         subgraph.node(end_node, label=ending_name, shape="doublecircle", style="filled", fillcolor=node_fill)
