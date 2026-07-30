@@ -28,11 +28,34 @@ def execute_statement_with_data_values(statement: str, data_values: dict[str, ob
     Try to execute a statement with data names replaced by their values.
     The statement should be a valid Python expression after replacement.
 
-    IMPORTANT: use this carefully, since it involves dynamic code execution.
+    IMPORTANT: this is NOT a secure sandbox, since it involves dynamic code
+    execution via eval(). Only use it with statements written by trusted
+    config authors, never with statements derived from untrusted input.
+
+    What this DOES protect against:
+    - Passing {"__builtins__": None} in the eval() globals stops the builtins
+      module from being implicitly injected, so bare references to builtin
+      names (e.g. __import__, open, exec, eval) fail to resolve and raise
+      instead of running.
+    - Rejecting any statement containing a double-underscore ("__") substring
+      blocks the standard CPython eval-sandbox escapes, which almost always
+      route through dunder attributes (e.g. "().__class__.__bases__[0]
+      .__subclasses__()") to reach classes/functions without ever naming a
+      builtin directly. Legitimate statements never need dunder attributes.
+
+    What this does NOT protect against: this is still not a formal security
+    boundary. There is no restriction on resource usage (e.g. a statement
+    that is arbitrarily expensive to compute), and no exhaustive guarantee
+    that every non-dunder escape route is closed.
     """
     try:
         # Replace {data_name} with data_values[data_name] in the statement string
         exec_statement = re.sub(r"\{(.*?)\}", lambda m: f"data_values['{m.group(1)}']", statement)
+        if "__" in exec_statement:
+            raise ValueError(
+                "double-underscore names (e.g. __class__, __import__) are not "
+                "allowed, since they can be used to escape restricted eval() sandboxes"
+            )
         # Evaluate the statement
         return eval(exec_statement, {"__builtins__": None}, {"data_values": data_values})
     except Exception as e:
