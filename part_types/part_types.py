@@ -6,11 +6,7 @@ from part_types.step.dump import DumpStep
 from part_types.step.expression import ExpressionStep
 from part_types.step.terminal import TerminalStep
 
-# All of the types of parts for experiments go here
-# Note: use snake case for part type names and
-# try to use a consistent naming scheme
-# Note: if you change a name here be sure to update
-# all of the config files too
+# Make a copy of this file in your own project and add your own types.
 part_types = {
     # Decision types
     "decision.conditional": PartTypeInfo(

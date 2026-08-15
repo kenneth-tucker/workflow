@@ -24,7 +24,7 @@ class ExpressionStep(Step):
 
     def run_step(self) -> None:
         for statement in self.statements:
-            parts = statement.split("=")
+            parts = statement.split("=", 1)
             if len(parts) != 2:
                 raise ConfigError(
                     f"Invalid statement '{statement}' in part '{self.get_full_name()}': "
